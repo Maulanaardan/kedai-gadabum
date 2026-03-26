@@ -65,10 +65,10 @@ Body:
   ]
 }
 ```
-🎯 Tujuan Project
+## 🎯 Tujuan Project
 
 Project ini dibuat sebagai latihan fullstack development dan implementasi sistem pemesanan digital pada cafe menggunakan QR code.
 
-👨‍💻 Author
+## 👨‍💻 Author
 
 Maulana Wardana
