@@ -1,6 +1,4 @@
-<<<<<<< HEAD
-<<<<<<< HEAD
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+his is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
 =======
 # ☕ Kedai Gadabum
 >>>>>>> 11e92d35d3c5e40af82146ee3b1d86fd5b556d90
