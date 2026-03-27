@@ -14,7 +14,7 @@ module.exports = {
         type: Sequelize.STRING,
       },
       category: {
-        type: Sequelize.ENUM("food", "frink"),
+        type: Sequelize.ENUM("food", "drink"),
       },
       description: {
         type: Sequelize.STRING,
@@ -28,6 +28,16 @@ module.exports = {
       stock: {
         type: Sequelize.INTEGER,
       },
+      createdAt: {
+        allowNull: false,
+        type: Sequelize.DATE,
+        defaultValue: Sequelize.literal('CURRENT_TIMESTAMP')
+    },
+      updatedAt: {
+        allowNull: false,
+        type: Sequelize.DATE,
+        defaultValue: Sequelize.literal('CURRENT_TIMESTAMP')
+    }
     });
   },
 
