@@ -9,7 +9,7 @@ Sistem pemesanan cafe berbasis QR code yang memungkinkan pelanggan untuk scan QR
 - 📋 Melihat menu makanan & minuman
 - 🛒 Pemesanan langsung dari web
 - 🧾 Sistem order (Order & Order Items)
-- 💳 Sistem pembayaran (cash / QRIS / card)
+- 💳 Sistem b (cash / QRIS / card)
 - 🪑 Manajemen meja
 
 ---
