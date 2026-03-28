@@ -4,6 +4,9 @@ const tableRoutes = require('./routes/tableRoutes')
 const orderRoutes = require('./routes/orderRoute')
 
 const app = express()
+const cors = require("cors");
+app.use(cors());
+
 app.use(express.json());
 app.use('/menus', menuRoutes); 
 app.use('/tables', tableRoutes);

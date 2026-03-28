@@ -3,11 +3,17 @@
 import { useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
 
+type Menu = {
+  id: number;
+  name: string;
+  price: number;
+};
+
 export default function OrderPage() {
   const searchParams = useSearchParams();
   const table = searchParams.get("table");
 
-  const [menus, setMenus] = useState<any[]>([]);
+  const [menus, setMenus] = useState<Menu[]>([]);
 
   useEffect(() => {
     fetch("http://localhost:5000/menus")
@@ -23,8 +29,7 @@ export default function OrderPage() {
       <h2>Menu:</h2>
       {menus.map((menu) => (
         <div key={menu.id}>
-          <p>{menu.name}</p>
-          <p>{menu.price}</p>
+          {menu.name} - Rp {menu.price}
         </div>
       ))}
     </div>
