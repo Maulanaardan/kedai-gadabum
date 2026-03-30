@@ -63,6 +63,31 @@ export default function OrderPage() {
     );
   };
 
+  const handleCheckout = async () => {
+    try {
+      const res = await fetch("http://localhost:5000/orders", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          tableNumber: table,
+          items: cart,
+          total,
+        }),
+      });
+
+      const data = await res.json();
+      console.log(data);
+
+      alert("Order berhasil!");
+      setCart([]); // reset cart
+    } catch (err) {
+      console.error(err);
+      alert("Gagal order");
+    }
+  };
+
   return (
     <div>
       <h1>Order Page</h1>
@@ -88,8 +113,12 @@ export default function OrderPage() {
           <button onClick={() => decreaseQty(item.id)}>-</button>
         </div>
       ))}
-      
+    
       <h3>Total: Rp {total}</h3>
+      <button onClick={handleCheckout}>
+        Checkout
+      </button>
+      console.log(req.body);
     </div>
   );
 }

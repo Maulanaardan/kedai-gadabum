@@ -29,7 +29,11 @@ module.exports = (sequelize, DataTypes) => {
       type: DataTypes.ENUM('pending','processing','completed','canceled'),
       defaultValue: 'pending'
     },
-    total_price: DataTypes.FLOAT
+    total_price: DataTypes.FLOAT,
+    order_code: {
+      type: DataTypes.STRING,
+      unique: true
+    },
   }, {
     sequelize,
     modelName: 'Order',

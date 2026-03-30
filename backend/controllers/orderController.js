@@ -1,33 +1,29 @@
-const { Order, OrderItems, Menu, Table, Payment } = require("../models");
+const { Order, OrderItem } = require("../models");
 
-exports.testRelasi = async (req, res) => {
+exports.create = async (req, res) => {
   try {
-    const orders = await Order.findAll({
-      include: [
-        {
-          model: OrderItems,
-          as: "items",
-          include: [
-            {
-              model: Menu,
-              as: "menu",
-            },
-          ],
-        },
-        {
-          model: Table,
-          as: "table",
-        },
-        {
-          model: Payment,
-          as: "payment",
-        },
-      ],
+    console.log(req.body);
+
+    const { tableNumber, items, total } = req.body;
+
+    const order = await Order.create({
+      table_id: tableNumber,      
+      total_price: total,         
+      status: "pending",
+      order_code: "ORD-" + Date.now()
     });
 
-    res.json(orders);
-  } catch (error) {
-    console.error(error);
-    res.status(500).json({ error: error.message });
+    for (const item of items) {
+      await OrderItem.create({
+        order_id: order.id,
+        menu_item_id: item.id,
+        quantity: item.qty,
+        price: item.price,
+      });
+    }
+
+    res.status(201).json({ message: "Order berhasil", order });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
   }
 };
