@@ -24,7 +24,9 @@ module.exports = (sequelize, DataTypes) => {
     }
   }
   Order.init({
-    table_number: DataTypes.STRING,
+      table_id: {
+      type: DataTypes.INTEGER,
+    },
     status: {
       type: DataTypes.ENUM('pending','processing','completed','canceled'),
       defaultValue: 'pending'

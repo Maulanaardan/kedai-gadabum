@@ -13,7 +13,7 @@ type CartItem = Menu & {
 };
 
 export default function OrderPage() {
-  const [menus, setMenus] = useState<CartItem[]>([]);
+  const [menus, setMenus] = useState<Menu[]>([]);
   const [cart, setCart] = useState<CartItem[]>([]);
 
   const searchParams = useSearchParams();
@@ -48,7 +48,7 @@ export default function OrderPage() {
         )
       );
     } else {
-      setCart([...cart, { ...menu, qty: 1 }]); // 🔥 ini penting
+      setCart([...cart, { ...menu, qty: 1 }]);
     }
   };
   const decreaseQty = (id: number) => {
@@ -71,7 +71,7 @@ export default function OrderPage() {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          tableNumber: table,
+          tableNumber: Number(table),
           items: cart,
           total,
         }),
@@ -118,7 +118,6 @@ export default function OrderPage() {
       <button onClick={handleCheckout}>
         Checkout
       </button>
-      console.log(req.body);
     </div>
   );
 }
