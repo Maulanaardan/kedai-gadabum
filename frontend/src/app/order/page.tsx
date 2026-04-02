@@ -89,35 +89,78 @@ export default function OrderPage() {
   };
 
   return (
-    <div>
-      <h1>Order Page</h1>
-      <p>Table: {table}</p>
+    <div style={{ display: "flex", padding: 20, gap: 40 }}>
 
-      <h2>Menu:</h2>
-      {menus.map((menu) => (
-        <div key={menu.id}>
-          {menu.name} - Rp {menu.price}
-          <button onClick={() => addToCart(menu)}>
-            Tambah
-          </button>
-        </div>
-      ))}
+      <div style={{ flex: 2 }}>
+        <h1>Order - Table {table}</h1>
 
-      <h2>Keranjang:</h2>
+        <h2>Menu</h2>
+        {menus.map((menu) => (
+          <div
+            key={menu.id}
+            style={{
+              border: "1px solid #ccc",
+              padding: 10,
+              marginBottom: 10,
+              borderRadius: 8,
+            }}
+          >
+            <h3>{menu.name}</h3>
+            <p>Rp {menu.price}</p>
+            <button onClick={() => addToCart(menu)}>
+              Tambah
+            </button>
+          </div>
+        ))}
+      </div>
 
-      {cart.map((item) => (
-        <div key={item.id}>
-          {item.name} - Rp {item.price} x {item.qty}
+      {/* 🔥 CART */}
+      <div style={{ flex: 1 }}>
+        <h2>Keranjang</h2>
 
-          <button onClick={() => addToCart(item)}>+</button>
-          <button onClick={() => decreaseQty(item.id)}>-</button>
-        </div>
-      ))}
-    
-      <h3>Total: Rp {total}</h3>
-      <button onClick={handleCheckout}>
-        Checkout
-      </button>
+        {cart.length === 0 && <p>Belum ada pesanan</p>}
+
+        {cart.map((item) => (
+          <div
+            key={item.id}
+            style={{
+              borderBottom: "1px solid #ddd",
+              paddingBottom: 10,
+              marginBottom: 10,
+            }}
+          >
+            <p>
+              {item.name} - Rp {item.price}
+            </p>
+
+            <div style={{ display: "flex", gap: 10 }}>
+              <button onClick={() => decreaseQty(item.id)}>
+                -
+              </button>
+              <span>{item.qty}</span>
+              <button onClick={() => addToCart(item)}>
+                +
+              </button>
+            </div>
+          </div>
+        ))}
+
+        <h3>Total: Rp {total}</h3>
+
+        <button
+          onClick={handleCheckout}
+          style={{
+            marginTop: 10,
+            padding: "10px 20px",
+            backgroundColor: "green",
+            color: "white",
+            border: "none",
+            borderRadius: 5,
+          }}
+        >
+          Checkout
+        </button>
+      </div>
     </div>
   );
 }
