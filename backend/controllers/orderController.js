@@ -1,4 +1,4 @@
-const { Order, OrderItem } = require("../models");
+const { Order, OrderItem, Menu } = require("../models");
 
 exports.create = async (req, res) => {
   try {
@@ -37,13 +37,35 @@ exports.getAll = async (req, res) => {
         {
           model: OrderItem,
           as: "item",
+          include: [
+            {
+              model: Menu,
+              as: "menu",
+            },
+          ],
         },
       ],
       order: [["createdAt", "DESC"]],
     });
 
-    res.json(orders);
+    res.json(orders); // 🔥 ini baru bener
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
 };
+
+exports.updateStatus = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { status } = req.body;
+
+    await Order.update({ status }, { where: { id } });
+
+    res.json({ message: "Status updated" });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+};
+
+
+

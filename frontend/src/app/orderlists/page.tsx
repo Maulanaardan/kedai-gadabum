@@ -2,14 +2,73 @@
 
 import { useEffect, useState } from "react";
 
+type OrderStatus = "pending" | "processing" | "completed" | "canceled"
+
+type Menu = {
+  id: number;
+  name: string;
+  price: number;
+};
+
+type OrderItem = {
+  id: number;
+  order_id: number;
+  menu_item_id: number;
+  quantity: number;
+  price: string;
+  sub_total: string;
+  menu?: Menu
+};
+
+type Order = {
+  id: number;
+  table_id: number;
+  status: OrderStatus;
+  total_price: string;
+  order_code: string | null;
+  item: OrderItem[];
+};
+
 export default function OrdersPage() {
-  const [orders, setOrders] = useState<any[]>([]);
+  const [orders, setOrders] = useState<Order[]>([]);
 
   useEffect(() => {
     fetch("http://localhost:5000/orders")
       .then((res) => res.json())
-      .then((data) => setOrders(data));
+      .then((data) => {
+      console.log("DATA:", data); // 🔥 taruh di sini
+      setOrders(data);
+    })
   }, []);
+
+  type OrderStatus = "pending" | "processing" | "completed" | "canceled";
+
+  const updateStatus = async (id: number, status: OrderStatus) => {
+    await fetch(`http://localhost:5000/orders/${id}/status`, {
+      method: "PUT",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ status }),
+    });
+
+    location.reload();
+  };
+
+  const getStatusColor = (status: string) => {
+    switch (status) {
+      case "pending":
+        return "#facc15"; // kuning
+      case "processing":
+        return "#60a5fa"; // biru
+      case "completed":
+        return "#4ade80"; // hijau
+      case "canceled":
+        return "#f87171"; // merah
+      default:
+        return "#ccc";
+    }
+  };
 
   return (
     <div style={{ padding: 20 }}>
@@ -19,28 +78,111 @@ export default function OrdersPage() {
         <div
           key={order.id}
           style={{
-            border: "1px solid #ccc",
-            borderRadius: 10,
-            padding: 15,
-            marginBottom: 15,
+            border: "1px solid #e5e7eb",
+            borderRadius: 16,
+            padding: 20,
+            marginBottom: 20,
+            boxShadow: "0 4px 10px rgba(0,0,0,0.05)",
+            background: "#023644",
           }}
         >
-          <h3>{order.order_code || "No Code"}</h3>
+          {/* HEADER */}
+          <div style={{ display: "flex", justifyContent: "space-between" }}>
+            <h3 style={{ fontWeight: "bold" }}>
+              {order.order_code || "No Code"}
+            </h3>
+
+            <span
+              style={{
+                background: getStatusColor(order.status),
+                padding: "4px 10px",
+                borderRadius: 999,
+                fontSize: 12,
+                fontWeight: "bold",
+              }}
+            >
+              {order.status}
+            </span>
+          </div>
+
           <p>Table: {order.table_id}</p>
-          <p>Status: {order.status}</p>
           <p>Total: Rp {order.total_price}</p>
 
-          <h4>Items:</h4>
+          {/* ITEMS */}
+          <h4 style={{ marginTop: 15 }}>🧾 Items:</h4>
 
           {order.item.length === 0 ? (
             <p style={{ color: "red" }}>Kosong ❌</p>
           ) : (
-            order.item.map((item: any) => (
-              <div key={item.id}>
-                Menu ID: {item.menu_item_id} x {item.quantity}
+            order.item.map((item) => (
+              <div
+                key={item.id}
+                style={{
+                  display: "flex",
+                  justifyContent: "space-between",
+                  borderBottom: "1px dashed #ddd",
+                  padding: "4px 0",
+                }}
+              >
+                <div key={item.id}>
+                  🍽 {item.menu?.name?? "Unknown"}  
+                  <br />
+                  {item.quantity} x Rp {item.price}
+                </div>
               </div>
             ))
           )}
+
+           {/* ACTION BUTTON */}
+          <div style={{ display: "flex", gap: 10, marginTop: 10 }}>
+            <button
+              onClick={() => updateStatus(order.id, "processing")}
+              style={{
+                background: "#60a5fa",
+                color: "#fff",
+                padding: "6px 12px",
+                border: "none",
+                borderRadius: 8,
+                cursor: "pointer",
+              }}
+              onMouseOver={(e) => (e.currentTarget.style.opacity = "0.8")}
+              onMouseOut={(e) => (e.currentTarget.style.opacity = "1")}
+            >
+              Proses
+            </button>
+
+            <button
+              onClick={() => updateStatus(order.id, "completed")}
+              style={{
+                background: "#4ade80",
+                color: "#fff",
+                padding: "6px 12px",
+                border: "none",
+                borderRadius: 8,
+                cursor: "pointer",
+              }}
+              onMouseOver={(e) => (e.currentTarget.style.opacity = "0.8")}
+              onMouseOut={(e) => (e.currentTarget.style.opacity = "1")}
+            >
+              Selesai
+            </button>
+
+            <button
+              onClick={() => updateStatus(order.id, "canceled")}
+              style={{
+                background: "#f87171",
+                color: "#fff",
+                padding: "6px 12px",
+                border: "none",
+                borderRadius: 8,
+                cursor: "pointer",
+              }}
+              onMouseOver={(e) => (e.currentTarget.style.opacity = "0.8")}
+              onMouseOut={(e) => (e.currentTarget.style.opacity = "1")}
+            >
+              Batal
+            </button>
+          </div>
         </div>
       ))}
     </div>
