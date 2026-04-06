@@ -29,17 +29,33 @@ type Order = {
   item: OrderItem[];
 };
 
-export default function OrdersPage() {
-  const [orders, setOrders] = useState<Order[]>([]);
+  export default function OrdersPage() {
+    const [orders, setOrders] = useState<Order[]>([]);
 
-  useEffect(() => {
-    fetch("http://localhost:5000/orders")
-      .then((res) => res.json())
-      .then((data) => {
-      console.log("DATA:", data); // 🔥 taruh di sini
-      setOrders(data);
-    })
-  }, []);
+    const fetchOrders = async () => {
+      try {
+        const res = await fetch("http://localhost:5000/orders");
+        const data = await res.json();
+        setOrders(data);
+      } catch (err) {
+        console.error(err);
+      }
+    };
+
+    useEffect(() => {
+      fetchOrders();
+
+      const interval = setInterval(fetchOrders, 3000);
+
+      const handleFocus = () => fetchOrders();
+
+      window.addEventListener("focus", handleFocus);
+
+      return () => {
+        clearInterval(interval);
+        window.removeEventListener("focus", handleFocus);
+      };
+    }, []);
 
   type OrderStatus = "pending" | "processing" | "completed" | "canceled";
 
@@ -52,7 +68,7 @@ export default function OrdersPage() {
       body: JSON.stringify({ status }),
     });
 
-    location.reload();
+    fetchOrders();
   };
 
   const getStatusColor = (status: string) => {
@@ -143,8 +159,9 @@ export default function OrdersPage() {
                 padding: "6px 12px",
                 border: "none",
                 borderRadius: 8,
-                cursor: "pointer",
+                cursor: order.status !== "pending" ? "not-allowed" : "pointer",
               }}
+              disabled={order.status !== "pending"}
               onMouseOver={(e) => (e.currentTarget.style.opacity = "0.8")}
               onMouseOut={(e) => (e.currentTarget.style.opacity = "1")}
             >
@@ -159,8 +176,9 @@ export default function OrdersPage() {
                 padding: "6px 12px",
                 border: "none",
                 borderRadius: 8,
-                cursor: "pointer",
+                cursor: order.status !== "processing" ? "not-allowed" : "pointer"
               }}
+              disabled={order.status !== "processing"}
               onMouseOver={(e) => (e.currentTarget.style.opacity = "0.8")}
               onMouseOut={(e) => (e.currentTarget.style.opacity = "1")}
             >
@@ -175,8 +193,11 @@ export default function OrdersPage() {
                 padding: "6px 12px",
                 border: "none",
                 borderRadius: 8,
-                cursor: "pointer",
+                cursor: (order.status === "completed" || order.status === "canceled")
+                      ? "not-allowed"
+                      : "pointer"
               }}
+              disabled={order.status === "completed" || order.status === "canceled"}
               onMouseOver={(e) => (e.currentTarget.style.opacity = "0.8")}
               onMouseOut={(e) => (e.currentTarget.style.opacity = "1")}
             >
