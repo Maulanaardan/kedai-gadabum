@@ -1,6 +1,15 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import {
+  LineChart,
+  Line,
+  XAxis,
+  YAxis,
+  Tooltip,
+  CartesianGrid,
+  ResponsiveContainer,
+} from "recharts";
 
 type Order = {
   id: number;
@@ -10,6 +19,24 @@ type Order = {
 
 export default function DashboardPage() {
   const [orders, setOrders] = useState<Order[]>([]);
+  const chartData = orders.reduce((acc: any, order: any) => {
+    const date = new Date(order.createdAt).toLocaleDateString();
+
+    const existing = acc.find((item: any) => item.date === date);
+
+    if (existing) {
+        existing.total += Number(order.total_price);
+        existing.count += 1;
+    } else {
+        acc.push({
+        date,
+        total: Number(order.total_price),
+        count: 1,
+        });
+    }
+
+    return acc;
+    }, []);
 
   const fetchOrders = async () => {
     const res = await fetch("http://localhost:5000/orders");
@@ -55,6 +82,33 @@ export default function DashboardPage() {
         <Card title="Completed" value={completedOrders} />
 
       </div>
+
+        <div style={{ marginTop: 40 }}>
+            <h2>📈 Revenue per Hari</h2>
+                <ResponsiveContainer width="100%" height={300}>
+                    <LineChart data={chartData}>
+                    <CartesianGrid strokeDasharray="3 3" />
+                    <XAxis dataKey="date" />
+                    <YAxis />
+                    <Tooltip />
+                    <Line type="monotone" dataKey="total" stroke="#4ade80" />
+                    </LineChart>
+                </ResponsiveContainer>
+        </div>
+
+        <div style={{ marginTop: 40 }}>
+            <h2>📦 Order per Hari</h2>
+
+            <ResponsiveContainer width="100%" height={300}>
+                <LineChart data={chartData}>
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis dataKey="date" />
+                <YAxis />
+                <Tooltip />
+                <Line type="monotone" dataKey="count" stroke="#60a5fa" />
+                </LineChart>
+            </ResponsiveContainer>
+        </div>
     </div>
   );
 }
