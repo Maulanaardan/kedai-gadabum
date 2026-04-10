@@ -2,6 +2,8 @@
 
 import { useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
+import { useRef } from "react";
+import toast from "react-hot-toast";
 
 type Menu = {
   id: number;
@@ -14,6 +16,8 @@ type CartItem = Menu & {
 
 export default function OrderPage() {
   const [menus, setMenus] = useState<Menu[]>([]);
+  const [orders, setOrders] = useState<any[]>([]);
+  const prevCountRef = useRef(0);
   const [cart, setCart] = useState<CartItem[]>([]);
 
   const searchParams = useSearchParams();
@@ -23,18 +27,37 @@ export default function OrderPage() {
     0
   );
 
-  useEffect(() => {
-  fetch("http://localhost:5000/menus")
-    .then((res) => {
-      console.log("RES:", res);
-      return res.json();
-    })
-    .then((data) => {
-      console.log("DATA:", data);
-      setMenus(data);
-    })
-    .catch((err) => console.error("ERROR:", err));
-}, []);
+    const fetchMenus = async () => {
+      try {
+        const res = await fetch("http://localhost:5000/menus");
+        const data = await res.json();
+        setMenus(data);
+      } catch (err) {
+        console.error(err);
+      }
+    };
+
+    const fetchOrders = async () => {
+      try {
+        const res = await fetch("http://localhost:5000/orders");
+        const data = await res.json();
+
+        // 🔥 DETEKSI ORDER BARU
+        if (
+          prevCountRef.current !== 0 &&
+          data.length > prevCountRef.current
+        ) {
+          toast.success("🚨 Order baru masuk!");
+        }
+
+        // update value TANPA re-render
+        prevCountRef.current = data.length;
+
+        setOrders(data);
+      } catch (err) {
+        console.error(err);
+      }
+    };
 
   const addToCart = (menu: Menu) => {
     const existing = cart.find((item) => item.id === menu.id);
@@ -87,6 +110,19 @@ export default function OrderPage() {
       alert("Gagal order");
     }
   };
+
+  useEffect(() => {
+    // fetch menu sekali saat load
+    fetchMenus();
+
+    // fetch orders pertama kali
+    fetchOrders();
+
+    // auto refresh tiap 3 detik
+    const interval = setInterval(fetchOrders, 3000);
+
+    return () => clearInterval(interval);
+  }, []);
 
   return (
     <div style={{ display: "flex", padding: 20, gap: 40 }}>
