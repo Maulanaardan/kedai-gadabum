@@ -1,5 +1,6 @@
 "use client";
-
+import toast from "react-hot-toast";
+import { useRef } from "react";
 import { useEffect, useState } from "react";
 
 type OrderStatus = "pending" | "processing" | "completed" | "canceled"
@@ -31,11 +32,21 @@ type Order = {
 
   export default function OrdersPage() {
     const [orders, setOrders] = useState<Order[]>([]);
+    const prevCountRef = useRef(0);
 
     const fetchOrders = async () => {
       try {
         const res = await fetch("http://localhost:5000/orders");
         const data = await res.json();
+
+        if (
+          prevCountRef.current !== 0 &&
+          data.length > prevCountRef.current
+        ) {
+          toast.success("🚨 Order baru masuk!");
+        }
+
+        prevCountRef.current = data.length;
         setOrders(data);
       } catch (err) {
         console.error(err);
@@ -47,14 +58,7 @@ type Order = {
 
       const interval = setInterval(fetchOrders, 3000);
 
-      const handleFocus = () => fetchOrders();
-
-      window.addEventListener("focus", handleFocus);
-
-      return () => {
-        clearInterval(interval);
-        window.removeEventListener("focus", handleFocus);
-      };
+      return () => clearInterval(interval);
     }, []);
 
   type OrderStatus = "pending" | "processing" | "completed" | "canceled";
