@@ -10,6 +10,7 @@ import {
   CartesianGrid,
   ResponsiveContainer,
 } from "recharts";
+import { useRouter } from "next/navigation";
 
 type Order = {
   id: number;
@@ -19,6 +20,8 @@ type Order = {
 
 export default function DashboardPage() {
   const [orders, setOrders] = useState<Order[]>([]);
+  const router = useRouter();
+
   const chartData = orders.reduce((acc: any, order: any) => {
     const date = new Date(order.createdAt).toLocaleDateString();
 
@@ -44,12 +47,20 @@ export default function DashboardPage() {
     setOrders(data);
   };
 
-    useEffect(() => {
-        fetchOrders();
+  useEffect(() => {
+    const isAdmin = localStorage.getItem("isAdmin");
 
-        const interval = setInterval(fetchOrders, 3000);
-        return () => clearInterval(interval);
-    }, []);
+    if (!isAdmin) {
+      router.push("/login");
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchOrders();
+
+    const interval = setInterval(fetchOrders, 3000);
+    return () => clearInterval(interval);
+  }, []);
 
   // 📊 HITUNG DATA
   const totalOrders = orders.length;

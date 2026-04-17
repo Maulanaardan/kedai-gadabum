@@ -2,6 +2,7 @@
 import toast from "react-hot-toast";
 import { useRef } from "react";
 import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 
 type OrderStatus = "pending" | "processing" | "completed" | "canceled"
 
@@ -33,6 +34,7 @@ type Order = {
   export default function OrdersPage() {
     const [orders, setOrders] = useState<Order[]>([]);
     const prevCountRef = useRef(0);
+    const router = useRouter();
 
     const fetchOrders = async () => {
       try {
