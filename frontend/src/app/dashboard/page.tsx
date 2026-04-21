@@ -11,6 +11,7 @@ import {
   ResponsiveContainer,
 } from "recharts";
 import { useRouter } from "next/navigation";
+import LogoutButton from "../components/LogoutButton";
 
 type Order = {
   id: number;
@@ -21,6 +22,7 @@ type Order = {
 export default function DashboardPage() {
   const [orders, setOrders] = useState<Order[]>([]);
   const router = useRouter();
+  const [checkingAuth, setCheckingAuth] = useState(true);
 
   const chartData = orders.reduce((acc: any, order: any) => {
     const date = new Date(order.createdAt).toLocaleDateString();
@@ -52,6 +54,8 @@ export default function DashboardPage() {
 
     if (!isAdmin) {
       router.push("/login");
+    } else {
+      setCheckingAuth(false);
     }
   }, []);
 
@@ -72,12 +76,16 @@ export default function DashboardPage() {
 
   const pendingOrders = orders.filter(o => o.status === "pending").length;
   const completedOrders = orders.filter(o => o.status === "completed").length;
+  if (checkingAuth) {
+    return <p>Loading...</p>;
+  }
 
   return (
     <div style={{ padding: 20 }}>
       <h1 style={{ fontSize: 24, fontWeight: "bold" }}>
         📊 Dashboard
       </h1>
+      <LogoutButton />
 
       {/* CARD */}
       <div style={{

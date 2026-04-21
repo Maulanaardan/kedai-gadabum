@@ -3,6 +3,7 @@ import toast from "react-hot-toast";
 import { useRef } from "react";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import LogoutButton from "../components/LogoutButton";
 
 type OrderStatus = "pending" | "processing" | "completed" | "canceled"
 
@@ -35,6 +36,9 @@ type Order = {
     const [orders, setOrders] = useState<Order[]>([]);
     const prevCountRef = useRef(0);
     const router = useRouter();
+    const [checkingAuth, setCheckingAuth] = useState(true);
+    const [filter, setFilter] = useState("all");
+    const [loading, setLoading] = useState(true);
 
     const fetchOrders = async () => {
       try {
@@ -56,11 +60,23 @@ type Order = {
     };
 
     useEffect(() => {
-      fetchOrders();
+      fetch("http://localhost:5000/orders")
+        .then((res) => res.json())
+        .then((data) => {
+          console.log("DATA:", data);
 
-      const interval = setInterval(fetchOrders, 3000);
+          if (Array.isArray(data)) {
+            setOrders(data);
+          } else {
+            setOrders([]);
+          }
 
-      return () => clearInterval(interval);
+          setLoading(false);
+        })
+        .catch((err) => {
+          console.error(err);
+          setLoading(false);
+        });
     }, []);
 
   type OrderStatus = "pending" | "processing" | "completed" | "canceled";
@@ -74,7 +90,12 @@ type Order = {
       body: JSON.stringify({ status }),
     });
 
-    fetchOrders();
+    // 🔥 update state langsung
+    setOrders((prev) =>
+      prev.map((order) =>
+        order.id === id ? { ...order, status } : order
+      )
+    );
   };
 
   const getStatusColor = (status: string) => {
@@ -92,11 +113,55 @@ type Order = {
     }
   };
 
+  if (loading) {
+    return <div>Loading...</div>;
+  }
+
+  const filteredOrders =
+  filter === "all"
+    ? orders
+    : orders.filter((order) => order.status === filter);
+  
   return (
     <div style={{ padding: 20 }}>
+      <div style={{ display: "flex", gap: 10, marginBottom: 20 }}>
+      <button onClick={() => setFilter("all")}>All</button>
+      <button onClick={() => setFilter("pending")} 
+        style={{
+          padding: "8px 14px",
+          borderRadius: 8,
+          border: "none",
+          cursor: "pointer",
+          background: filter === "pending" ? "#facc15" : "#e5e7eb",
+      }}>Pending</button>
+      <button onClick={() => setFilter("processing")}
+        style={{
+          padding: "8px 14px",
+          borderRadius: 8,
+          border: "none",
+          cursor: "pointer",
+          background: filter === "processing" ? "#facc15" : "#e5e7eb"
+      }}>Processing</button>
+      <button onClick={() => setFilter("completed")}
+        style={{
+          padding: "8px 14px",
+          borderRadius: 8,
+          border: "none",
+          cursor: "pointer",
+          background: filter === "completed" ? "#facc15" : "#e5e7eb"
+      }}>Completed</button>
+      <button onClick={() => setFilter("canceled")}
+        style={{
+          padding: "8px 14px",
+          borderRadius: 8,
+          border: "none",
+          cursor: "pointer",
+          background: filter === "cancelled" ? "#facc15" : "#e5e7eb"
+      }}>Canceled</button>
+    </div>
       <h1>📋 Daftar Order</h1>
 
-      {orders.map((order) => (
+      {filteredOrders.map((order) => (
         <div
           key={order.id}
           style={{
