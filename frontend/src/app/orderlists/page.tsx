@@ -39,6 +39,8 @@ type Order = {
     const [checkingAuth, setCheckingAuth] = useState(true);
     const [filter, setFilter] = useState("all");
     const [loading, setLoading] = useState(true);
+    const [search, setSearch] = useState("");
+    const [tableFilter, setTableFilter] = useState("all");
 
     const fetchOrders = async () => {
       try {
@@ -60,23 +62,33 @@ type Order = {
     };
 
     useEffect(() => {
-      fetch("http://localhost:5000/orders")
-        .then((res) => res.json())
-        .then((data) => {
-          console.log("DATA:", data);
+      const fetchOrders = () => {
+        fetch("http://localhost:5000/orders")
+          .then((res) => res.json())
+          .then((data) => {
+            console.log("DATA:", data);
 
-          if (Array.isArray(data)) {
-            setOrders(data);
-          } else {
-            setOrders([]);
-          }
+            if (Array.isArray(data)) {
+              setOrders(data);
+            } else {
+              setOrders([]);
+            }
 
-          setLoading(false);
-        })
-        .catch((err) => {
-          console.error(err);
-          setLoading(false);
-        });
+            setLoading(false);
+          })
+          .catch((err) => {
+            console.error(err);
+            setLoading(false);
+          });
+      };
+
+      fetchOrders();
+
+      const interval = setInterval(() => {
+        fetchOrders();
+      }, 5000);
+
+      return () => clearInterval(interval);
     }, []);
 
   type OrderStatus = "pending" | "processing" | "completed" | "canceled";
@@ -117,11 +129,34 @@ type Order = {
     return <div>Loading...</div>;
   }
 
-  const filteredOrders =
-  filter === "all"
-    ? orders
-    : orders.filter((order) => order.status === filter);
-  
+  const filteredOrders = orders.filter((order) => {
+    const matchSearch =
+      order.order_code?.toLowerCase().includes(search.toLowerCase()) ||
+      String(order.table_id).includes(search);
+
+    const matchTable =
+      tableFilter === "all" ||
+      String(order.table_id) === tableFilter;
+
+    return matchSearch && matchTable;
+  });
+
+  const pendingCount = orders.filter(
+    (order) => order.status === "pending"
+  ).length;
+
+  const processingCount = orders.filter(
+    (order) => order.status === "processing"
+  ).length;
+
+  const completedCount = orders.filter(
+    (order) => order.status === "completed"
+  ).length;
+
+  const canceledCount = orders.filter(
+    (order) => order.status === "canceled"
+  ).length;
+
   return (
     <div style={{ padding: 20 }}>
       <div style={{ display: "flex", gap: 10, marginBottom: 20 }}>
@@ -160,6 +195,100 @@ type Order = {
       }}>Canceled</button>
     </div>
       <h1>📋 Daftar Order</h1>
+      <div
+        style={{
+          display: "grid",
+          gridTemplateColumns: "repeat(4, 1fr)",
+          gap: 15,
+          marginBottom: 20,
+        }}
+      >
+        <div
+          style={{
+            background: "#facc15",
+            color: "#000",
+            padding: 15,
+            borderRadius: 12,
+            fontWeight: "bold",
+          }}
+        >
+          Pending: {pendingCount}
+        </div>
+
+        <div
+          style={{
+            background: "#60a5fa",
+            color: "#fff",
+            padding: 15,
+            borderRadius: 12,
+            fontWeight: "bold",
+          }}
+        >
+          Processing: {processingCount}
+        </div>
+
+        <div
+          style={{
+            background: "#4ade80",
+            color: "#fff",
+            padding: 15,
+            borderRadius: 12,
+            fontWeight: "bold",
+          }}
+        >
+          Completed: {completedCount}
+        </div>
+
+        <div
+          style={{
+            background: "#f87171",
+            color: "#fff",
+            padding: 15,
+            borderRadius: 12,
+            fontWeight: "bold",
+          }}
+        >
+          Canceled: {canceledCount}
+        </div>
+      </div>
+
+      <div
+        style={{
+          display: "flex",
+          gap: 10,
+          marginBottom: 20,
+          marginTop: 20,
+        }}
+      >
+        <input
+          type="text"
+          placeholder="Cari order code / meja..."
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          style={{
+            flex: 1,
+            padding: 10,
+            borderRadius: 8,
+            border: "1px solid #ccc",
+          }}
+        />
+
+        <select
+          value={tableFilter}
+          onChange={(e) => setTableFilter(e.target.value)}
+          style={{
+            padding: 10,
+            borderRadius: 8,
+            border: "1px solid #ccc",
+          }}
+        >
+          <option value="all">Semua Meja</option>
+          <option value="1">Table 1</option>
+          <option value="2">Table 2</option>
+          <option value="3">Table 3</option>
+          <option value="4">Table 4</option>
+        </select>
+      </div>
 
       {filteredOrders.map((order) => (
         <div
@@ -221,59 +350,82 @@ type Order = {
           )}
 
            {/* ACTION BUTTON */}
-          <div style={{ display: "flex", gap: 10, marginTop: 10 }}>
-            <button
-              onClick={() => updateStatus(order.id, "processing")}
-              style={{
-                background: "#60a5fa",
-                color: "#fff",
-                padding: "6px 12px",
-                border: "none",
-                borderRadius: 8,
-                cursor: order.status !== "pending" ? "not-allowed" : "pointer",
-              }}
-              disabled={order.status !== "pending"}
-              onMouseOver={(e) => (e.currentTarget.style.opacity = "0.8")}
-              onMouseOut={(e) => (e.currentTarget.style.opacity = "1")}
-            >
-              Proses
-            </button>
+          <div style={{ display: "flex", gap: 10, marginTop: 15 }}>
+            {order.status === "pending" && (
+              <>
+                <button
+                  onClick={() => updateStatus(order.id, "processing")}
+                  style={{
+                    background: "#60a5fa",
+                    color: "#fff",
+                    padding: "8px 14px",
+                    border: "none",
+                    borderRadius: 8,
+                    cursor: "pointer",
+                  }}
+                >
+                  Proses
+                </button>
 
-            <button
-              onClick={() => updateStatus(order.id, "completed")}
-              style={{
-                background: "#4ade80",
-                color: "#fff",
-                padding: "6px 12px",
-                border: "none",
-                borderRadius: 8,
-                cursor: order.status !== "processing" ? "not-allowed" : "pointer"
-              }}
-              disabled={order.status !== "processing"}
-              onMouseOver={(e) => (e.currentTarget.style.opacity = "0.8")}
-              onMouseOut={(e) => (e.currentTarget.style.opacity = "1")}
-            >
-              Selesai
-            </button>
+                <button
+                  onClick={() => updateStatus(order.id, "canceled")}
+                  style={{
+                    background: "#f87171",
+                    color: "#fff",
+                    padding: "8px 14px",
+                    border: "none",
+                    borderRadius: 8,
+                    cursor: "pointer",
+                  }}
+                >
+                  Batal
+                </button>
+              </>
+            )}
 
-            <button
-              onClick={() => updateStatus(order.id, "canceled")}
-              style={{
-                background: "#f87171",
-                color: "#fff",
-                padding: "6px 12px",
-                border: "none",
-                borderRadius: 8,
-                cursor: (order.status === "completed" || order.status === "canceled")
-                      ? "not-allowed"
-                      : "pointer"
-              }}
-              disabled={order.status === "completed" || order.status === "canceled"}
-              onMouseOver={(e) => (e.currentTarget.style.opacity = "0.8")}
-              onMouseOut={(e) => (e.currentTarget.style.opacity = "1")}
-            >
-              Batal
-            </button>
+            {order.status === "processing" && (
+              <>
+                <button
+                  onClick={() => updateStatus(order.id, "completed")}
+                  style={{
+                    background: "#4ade80",
+                    color: "#fff",
+                    padding: "8px 14px",
+                    border: "none",
+                    borderRadius: 8,
+                    cursor: "pointer",
+                  }}
+                >
+                  Selesai
+                </button>
+
+                <button
+                  onClick={() => updateStatus(order.id, "canceled")}
+                  style={{
+                    background: "#f87171",
+                    color: "#fff",
+                    padding: "8px 14px",
+                    border: "none",
+                    borderRadius: 8,
+                    cursor: "pointer",
+                  }}
+                >
+                  Batal
+                </button>
+              </>
+            )}
+
+            {order.status === "completed" && (
+              <span style={{ color: "#4ade80", fontWeight: "bold" }}>
+                ✅ Order selesai
+              </span>
+            )}
+
+            {order.status === "canceled" && (
+              <span style={{ color: "#f87171", fontWeight: "bold" }}>
+                ❌ Order dibatalkan
+              </span>
+            )}
           </div>
         </div>
       ))}
