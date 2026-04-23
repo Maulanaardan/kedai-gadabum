@@ -130,6 +130,9 @@ type Order = {
   }
 
   const filteredOrders = orders.filter((order) => {
+    const matchStatus =
+      filter === "all" || order.status === filter;
+
     const matchSearch =
       order.order_code?.toLowerCase().includes(search.toLowerCase()) ||
       String(order.table_id).includes(search);
@@ -138,7 +141,7 @@ type Order = {
       tableFilter === "all" ||
       String(order.table_id) === tableFilter;
 
-    return matchSearch && matchTable;
+    return matchStatus && matchSearch && matchTable;
   });
 
   const pendingCount = orders.filter(
@@ -160,6 +163,7 @@ type Order = {
   return (
     <div style={{ padding: 20 }}>
       <div style={{ display: "flex", gap: 10, marginBottom: 20 }}>
+      <LogoutButton />
       <button onClick={() => setFilter("all")}>All</button>
       <button onClick={() => setFilter("pending")} 
         style={{

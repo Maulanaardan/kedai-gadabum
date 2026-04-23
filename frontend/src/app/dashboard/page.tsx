@@ -15,8 +15,11 @@ import LogoutButton from "../components/LogoutButton";
 
 type Order = {
   id: number;
+  table_id: number;
   status: string;
   total_price: string;
+  createdAt: string;
+  order_code: string;
 };
 
 export default function DashboardPage() {
@@ -76,6 +79,41 @@ export default function DashboardPage() {
 
   const pendingOrders = orders.filter(o => o.status === "pending").length;
   const completedOrders = orders.filter(o => o.status === "completed").length;
+  const today = new Date().toDateString();
+  const todayOrders = orders.filter(
+    (order) =>
+      new Date(order.createdAt).toDateString() === today
+  );
+  const latestOrders = [...orders]
+  .sort(
+    (a, b) =>
+      new Date(b.createdAt).getTime() -
+      new Date(a.createdAt).getTime()
+  )
+  .slice(0, 5);
+
+  const todayOrderCount = todayOrders.length;
+
+  const todayRevenue = todayOrders.reduce(
+    (sum, order) => sum + Number(order.total_price),
+    0
+  );
+
+  const getStatusColor = (status: string) => {
+    switch (status) {
+      case "pending":
+        return "#facc15"; // kuning
+      case "processing":
+        return "#60a5fa"; // biru
+      case "completed":
+        return "#4ade80"; // hijau
+      case "canceled":
+        return "#f87171"; // merah
+      default:
+        return "#9ca3af";
+    }
+  };
+
   if (checkingAuth) {
     return <p>Loading...</p>;
   }
@@ -128,6 +166,94 @@ export default function DashboardPage() {
                 </LineChart>
             </ResponsiveContainer>
         </div>
+
+        <div
+          style={{
+            display: "grid",
+            gridTemplateColumns: "repeat(2, 1fr)",
+            gap: 15,
+            marginTop: 20,
+          }}
+        >
+          <div
+            style={{
+              background: "#111827",
+              padding: 20,
+              borderRadius: 16,
+              color: "#fff",
+            }}
+          >
+            <h3>Total Order Hari Ini</h3>
+            <h1>{todayOrderCount}</h1>
+          </div>
+
+          <div
+            style={{
+              background: "#16a34a",
+              padding: 20,
+              borderRadius: 16,
+              color: "#fff",
+            }}
+          >
+            <h3>Omzet Hari Ini</h3>
+            <h1>Rp {todayRevenue.toLocaleString("id-ID")}</h1>
+          </div>
+        </div>
+
+        <div
+  style={{
+    marginTop: 30,
+    background: "#111827",
+    borderRadius: 16,
+    padding: 20,
+  }}
+>
+  <h2 style={{ marginBottom: 20 }}>🧾 Order Terbaru</h2>
+
+  <table style={{ width: "100%", borderCollapse: "collapse" }}>
+    <thead>
+      <tr style={{ textAlign: "left", borderBottom: "1px solid #374151" }}>
+        <th style={{ padding: 10 }}>Order Code</th>
+        <th style={{ padding: 10 }}>Table</th>
+        <th style={{ padding: 10 }}>Total</th>
+        <th style={{ padding: 10 }}>Status</th>
+        <th style={{ padding: 10 }}>Tanggal</th>
+      </tr>
+    </thead>
+
+    <tbody>
+      {latestOrders.map((order) => (
+        <tr
+          key={order.id}
+          style={{ borderBottom: "1px solid #1f2937" }}
+        >
+          <td style={{ padding: 10 }}>{order.order_code}</td>
+          <td style={{ padding: 10 }}>Table {order.table_id}</td>
+          <td style={{ padding: 10 }}>
+            Rp {Number(order.total_price).toLocaleString("id-ID")}
+          </td>
+          <td style={{ padding: 10 }}>
+            <span
+              style={{
+                background: getStatusColor(order.status),
+                padding: "4px 10px",
+                borderRadius: 999,
+                fontSize: 12,
+                fontWeight: "bold",
+                color: "#fff",
+              }}
+            >
+              {order.status}
+            </span>
+          </td>
+          <td style={{ padding: 10 }}>
+            {new Date(order.createdAt).toLocaleDateString("id-ID")}
+          </td>
+        </tr>
+      ))}
+    </tbody>
+  </table>
+</div>
     </div>
   );
 }
