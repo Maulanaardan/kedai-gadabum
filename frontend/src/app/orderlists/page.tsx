@@ -160,6 +160,41 @@ type Order = {
     (order) => order.status === "canceled"
   ).length;
 
+  const handlePrint = (order: any) => {
+    const itemsHtml = order.item
+      .map(
+        (item: any) => `
+          <div style="display:flex; justify-content:space-between;">
+            <span>${item.menu?.name ?? "Menu"}</span>
+            <span>${item.quantity} x ${item.price}</span>
+          </div>
+        `
+      )
+      .join("");
+
+    const content = `
+      <div style="font-family: monospace; width: 250px;">
+        <hr style="border-top:1px dashed #000;" />
+        <h3 style="text-align:center;">Kedai Gadabum</h3>
+        <hr/>
+        <p>Order: ${order.order_code}</p>
+        <p>Table: ${order.table_id}</p>
+        <p>${new Date(order.createdAt).toLocaleString()}</p>
+        <hr/>
+        ${itemsHtml}
+        <hr/>
+        <h4>Total: Rp ${Number(order.total_price).toLocaleString("id-ID")}</h4>
+        <hr/>
+        <p style="text-align:center;">Terima kasih 🙏</p>
+      </div>
+    `;
+
+    const win = window.open("", "", "width=300,height=500");
+    win?.document.write(content);
+    win?.document.close();
+    win?.print();
+  };
+
   return (
     <div style={{ padding: 20 }}>
       <div style={{ display: "flex", gap: 10, marginBottom: 20 }}>
@@ -430,6 +465,20 @@ type Order = {
                 ❌ Order dibatalkan
               </span>
             )}
+
+            <button
+              onClick={() => handlePrint(order)}
+              style={{
+                background: "#facc15",
+                color: "#000",
+                padding: "8px 14px",
+                border: "none",
+                borderRadius: 8,
+                cursor: "pointer",
+              }}
+            >
+              🧾 Print
+            </button>
           </div>
         </div>
       ))}
