@@ -48,7 +48,7 @@ exports.getAll = async (req, res) => {
       order: [["createdAt", "DESC"]],
     });
 
-    res.json(orders); // 🔥 ini baru bener
+    res.json(orders);
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -67,5 +67,64 @@ exports.updateStatus = async (req, res) => {
   }
 };
 
+exports.updatePayment = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    await Order.update(
+      { 
+        payment_status: "paid",
+        status: "processing" // 🔥 GANTI INI
+      },
+      { where: { id } }
+    );
+
+    res.json({ message: "Payment success" });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+};
+
+exports.getPaidOrders = async (req, res) => {
+  try {
+    const orders = await Order.findAll({
+      where: {
+        payment_status: "paid",
+      },
+      include: [
+        {
+          model: OrderItem,
+          as: "item",
+          include: [
+            {
+              model: Menu,
+              as: "menu",
+            },
+          ],
+        },
+      ],
+      order: [["createdAt", "DESC"]],
+    });
+
+    res.json(orders);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+};
+
+exports.completeOrder = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    await Order.update(
+      { status: "completed" },
+      { where: { id } }
+    );
+
+    res.json({ message: "Order completed" });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+};
 
 

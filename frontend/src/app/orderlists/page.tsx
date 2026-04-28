@@ -425,20 +425,6 @@ type Order = {
             {order.status === "processing" && (
               <>
                 <button
-                  onClick={() => updateStatus(order.id, "completed")}
-                  style={{
-                    background: "#4ade80",
-                    color: "#fff",
-                    padding: "8px 14px",
-                    border: "none",
-                    borderRadius: 8,
-                    cursor: "pointer",
-                  }}
-                >
-                  Selesai
-                </button>
-
-                <button
                   onClick={() => updateStatus(order.id, "canceled")}
                   style={{
                     background: "#f87171",

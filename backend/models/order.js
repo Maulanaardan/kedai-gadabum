@@ -24,7 +24,7 @@ module.exports = (sequelize, DataTypes) => {
     }
   }
   Order.init({
-      table_id: {
+    table_id: {
       type: DataTypes.INTEGER,
     },
     status: {
@@ -35,6 +35,10 @@ module.exports = (sequelize, DataTypes) => {
     order_code: {
       type: DataTypes.STRING,
       unique: true
+    },
+    payment_status: {
+      type: DataTypes.ENUM("unpaid", "paid"),
+      defaultValue: "unpaid",
     },
   }, {
     sequelize,
