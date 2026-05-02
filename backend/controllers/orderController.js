@@ -2,7 +2,13 @@ const { Order, OrderItem, Menu } = require("../models");
 
 exports.create = async (req, res) => {
   try {
-    const { tableNumber, items, total } = req.body;
+    const { tableNumber, items, total } = req.body || {};
+
+    if (!tableNumber || !items || !Array.isArray(items)) {
+      return res.status(400).json({
+        error: "Data tidak lengkap (tableNumber & items wajib)",
+      });
+    }
 
     const order = await Order.create({
       table_id: tableNumber,
