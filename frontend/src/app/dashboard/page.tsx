@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { fetchWithAuth } from "@/utils/api";
 import {
   LineChart,
   Line,
@@ -36,66 +37,98 @@ type Order = {
 export default function DashboardPage() {
   const [orders, setOrders] = useState<Order[]>([]);
   const router = useRouter();
-  const [checkingAuth, setCheckingAuth] = useState(true);
+  const [loading, setLoading] = useState(true);
 
-  const chartData = orders.reduce((acc: any, order: any) => {
-    const date = new Date(order.createdAt).toLocaleDateString();
+  const chartData = Array.isArray(orders)
+    ? orders.reduce((acc: any, order: any) => {
+        const date = new Date(order.createdAt).toLocaleDateString();
 
-    const existing = acc.find((item: any) => item.date === date);
+        const existing = acc.find((item: any) => item.date === date);
 
-    if (existing) {
-        existing.total += Number(order.total_price);
-        existing.count += 1;
-    } else {
-        acc.push({
-        date,
-        total: Number(order.total_price),
-        count: 1,
-        });
+        if (existing) {
+          existing.total += Number(order.total_price);
+          existing.count += 1;
+        } else {
+          acc.push({
+            date,
+            total: Number(order.total_price),
+            count: 1,
+          });
+        }
+
+        return acc;
+      }, [])
+  : [];
+
+ const fetchOrders = async () => {
+  try {
+    const token = localStorage.getItem("token");
+
+    const res = await fetch("http://localhost:5000/orders", {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    });
+
+    const text = await res.text(); // 🔥 ambil raw response dulu
+    console.log("RAW RESPONSE:", text);
+
+    let data;
+    try {
+      data = JSON.parse(text);
+    } catch {
+      console.error("Bukan JSON!");
+      return;
     }
 
-    return acc;
-    }, []);
+    if (!res.ok) {
+      console.error("ERROR:", data);
+      return;
+    }
 
-  const fetchOrders = async () => {
-    const res = await fetch("http://localhost:5000/orders");
-    const data = await res.json();
     setOrders(data);
+  } catch (err) {
+    console.error("FETCH ERROR:", err);
+  }
   };
 
   useEffect(() => {
-    const isAdmin = localStorage.getItem("isAdmin");
+    const token = localStorage.getItem("token");
+    const role = localStorage.getItem("role");
 
-    if (!isAdmin) {
+    if (!token || role !== "admin") {
       router.push("/login");
-    } else {
-      setCheckingAuth(false);
+      return;
     }
-  }, []);
 
-  useEffect(() => {
+    setLoading(false);
+
     fetchOrders();
 
     const interval = setInterval(fetchOrders, 3000);
     return () => clearInterval(interval);
+
   }, []);
 
   // 📊 HITUNG DATA
   const totalOrders = orders.length;
 
-  const totalRevenue = orders.reduce(
-    (sum, order) => sum + Number(order.total_price),
-    0
-  );
+  const totalRevenue = Array.isArray(orders)
+  ? orders.reduce(
+      (sum, order) => sum + Number(order.total_price),
+      0
+    )
+  : 0;
 
-  const pendingOrders = orders.filter(o => o.status === "pending").length;
-  const completedOrders = orders.filter(o => o.status === "completed").length;
+  const safeOrders = Array.isArray(orders) ? orders : [];
+  const pendingOrders = safeOrders.filter(o => o.status === "pending").length;
+  const completedOrders = safeOrders.filter(o => o.status === "completed").length;  
   const today = new Date().toDateString();
-  const todayOrders = orders.filter(
+  const todayOrders = safeOrders.filter(
     (order) =>
       new Date(order.createdAt).toDateString() === today
   );
-  const latestOrders = [...orders]
+  const latestOrders = [...safeOrders]
   .sort(
     (a, b) =>
       new Date(b.createdAt).getTime() -
@@ -125,8 +158,8 @@ export default function DashboardPage() {
     }
   };
 
-  const menuStats = orders.reduce((acc: any, order) => {
-    order.item.forEach((item: any) => {
+  const menuStats = safeOrders.reduce((acc: any, order) => {
+    order.item?.forEach((item: any) => {
       const name = item.menu?.name ?? "Unknown";
 
       if (!acc[name]) {
@@ -149,9 +182,7 @@ export default function DashboardPage() {
     total: menu.qty,
   }));
 
-  if (checkingAuth) {
-    return <p>Loading...</p>;
-  }
+  if (loading) return <div>Loading dashboard...</div>;
 
   return (
     <div style={{ padding: 20 }}>

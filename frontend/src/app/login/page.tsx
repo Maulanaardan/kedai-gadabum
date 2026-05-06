@@ -4,102 +4,60 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 
 export default function LoginPage() {
+  const [username, setUsername] = useState("");
+  const [password, setPassword] = useState("");
   const router = useRouter();
 
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
+  
+  const handleLogin = async () => {
+  const res = await fetch("http://localhost:5000/auth/login", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ username, password }),
+  });
 
-  const handleLogin = (e: React.FormEvent) => {
-    e.preventDefault();
+  const data = await res.json();
+  console.log("LOGIN RESPONSE:", data);
 
-    if (
-      email === "admin@gmail.com" &&
-      password === "admin123"
-    ) {
-      localStorage.setItem("isAdmin", "true");
-      router.push("/dashboard");
-    } else {
-      alert("Email atau password salah");
-    }
+  if (!res.ok) {
+    alert(data.error || "Login gagal");
+    return;
+  }
+
+  // ✅ FIX DI SINI
+  localStorage.setItem("token", data.token);
+  localStorage.setItem("role", data.role);
+
+  // ✅ redirect
+  if (data.role === "admin") {
+    router.push("/dashboard");
+  } else if (data.role === "kitchen") {
+    router.push("/dashboardkitchen");
+  } else if (data.role === "cashier") {
+    router.push("/orderlists");
+  }
   };
 
   return (
-    <div
-      style={{
-        minHeight: "100vh",
-        display: "flex",
-        justifyContent: "center",
-        alignItems: "center",
-        background: "#0f172a",
-      }}
-    >
-      <form
-        onSubmit={handleLogin}
-        style={{
-          width: 350,
-          background: "#1e293b",
-          padding: 30,
-          borderRadius: 20,
-          display: "flex",
-          flexDirection: "column",
-          gap: 15,
-          boxShadow: "0 10px 30px rgba(0,0,0,0.3)",
-        }}
-      >
-        <h1
-          style={{
-            color: "white",
-            textAlign: "center",
-            fontSize: 28,
-            fontWeight: "bold",
-          }}
-        >
-          Admin Login
-        </h1>
+    <div style={{ padding: 40 }}>
+      <h1>Login</h1>
 
-        <input
-          type="email"
-          placeholder="Email"
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
-          style={{
-            padding: 12,
-            borderRadius: 10,
-            border: "1px solid #334155",
-            background: "#0f172a",
-            color: "white",
-          }}
-        />
+      <input
+        placeholder="Username"
+        onChange={(e) => setUsername(e.target.value)}
+      />
+      <br /><br />
 
-        <input
-          type="password"
-          placeholder="Password"
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-          style={{
-            padding: 12,
-            borderRadius: 10,
-            border: "1px solid #334155",
-            background: "#0f172a",
-            color: "white",
-          }}
-        />
+      <input
+        type="password"
+        placeholder="Password"
+        onChange={(e) => setPassword(e.target.value)}
+      />
+      <br /><br />
 
-        <button
-          type="submit"
-          style={{
-            padding: 12,
-            border: "none",
-            borderRadius: 10,
-            background: "#22c55e",
-            color: "white",
-            fontWeight: "bold",
-            cursor: "pointer",
-          }}
-        >
-          Login
-        </button>
-      </form>
+      <button onClick={handleLogin}>Login</button>
     </div>
   );
 }

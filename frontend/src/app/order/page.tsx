@@ -43,28 +43,6 @@ export default function OrderPage() {
       }
     };
 
-    const fetchOrders = async () => {
-      try {
-        const res = await fetch("http://localhost:5000/orders");
-        const data = await res.json();
-
-        // 🔥 DETEKSI ORDER BARU
-        if (
-          prevCountRef.current !== 0 &&
-          data.length > prevCountRef.current
-        ) {
-          toast.success("🚨 Order baru masuk!");
-        }
-
-        // update value TANPA re-render
-        prevCountRef.current = data.length;
-
-        setOrders(data);
-      } catch (err) {
-        console.error(err);
-      }
-    };
-
   const addToCart = (menu: Menu) => {
     const existing = cart.find((item) => item.id === menu.id);
 
@@ -93,50 +71,64 @@ export default function OrderPage() {
   };
 
   const handleCheckout = async () => {
-    const res = await fetch("http://localhost:5000/orders", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        tableNumber: Number(table),
-        items: cart,
-        total,
-        payment_method: paymentMethod,
-      }),
-    });
+  if (!table) {
+    alert("Table tidak ada!");
+    return;
+  }
 
-    const data = await res.json();
+  if (cart.length === 0) {
+    alert("Keranjang kosong!");
+    return;
+  }
 
-    if (paymentMethod === "qris") {
-      setCurrentOrder(data.order); // simpan order
-      setShowQR(true);       // tampilkan QR
-    } else {
-      alert("Order berhasil!");
-      setCart([]);
-    }
+  const formattedItems = cart.map((item) => ({
+    menu_id: item.id,
+    quantity: item.qty,
+  }));
+
+  const res = await fetch("http://localhost:5000/orders", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      tableNumber: Number(table),
+      item: formattedItems, // 🔥 INI YANG BENER
+      total,
+      payment_method: paymentMethod,
+    }),
+  });
+
+  const data = await res.json();
+  console.log("RESPONSE:", data);
+
+  if (!res.ok) {
+    alert(data.error);
+    return;
+  }
+
+  if (paymentMethod === "qris") {
+    setCurrentOrder(data.order);
+    setShowQR(true);
+  } else {
+    alert("Order berhasil!");
+    setCart([]);
+  }
 };
 
   useEffect(() => {
     // fetch menu sekali saat load
     fetchMenus();
-
-    // fetch orders pertama kali
-    fetchOrders();
-
-    // auto refresh tiap 3 detik
-    const interval = setInterval(fetchOrders, 3000);
-
-    return () => clearInterval(interval);
   }, []);
 
   const handleConfirmPayment = async () => {
-    await fetch(
-      `http://localhost:5000/orders/${currentOrder.id}/pay`,
-      {
-        method: "PUT",
-      }
-    );
+    const token = localStorage.getItem("token");
+    await fetch(`http://localhost:5000/orders/${currentOrder.id}/pay`, {
+      method: "PUT",
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    });
 
     alert("Pembayaran berhasil!");
 

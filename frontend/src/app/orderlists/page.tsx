@@ -1,6 +1,7 @@
 "use client";
 import toast from "react-hot-toast";
 import { useRef } from "react";
+import { fetchWithAuth } from "@/utils/api";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import LogoutButton from "../components/LogoutButton";
@@ -29,14 +30,13 @@ type Order = {
   status: OrderStatus;
   total_price: string;
   order_code: string | null;
-  item: OrderItem[];
+  items: OrderItem[];
 };
 
   export default function OrdersPage() {
     const [orders, setOrders] = useState<Order[]>([]);
     const prevCountRef = useRef(0);
     const router = useRouter();
-    const [checkingAuth, setCheckingAuth] = useState(true);
     const [filter, setFilter] = useState("all");
     const [loading, setLoading] = useState(true);
     const [search, setSearch] = useState("");
@@ -44,7 +44,7 @@ type Order = {
 
     const fetchOrders = async () => {
       try {
-        const res = await fetch("http://localhost:5000/orders");
+        const res = await fetchWithAuth("http://localhost:5000/orders/cashier");
         const data = await res.json();
 
         if (
@@ -52,6 +52,12 @@ type Order = {
           data.length > prevCountRef.current
         ) {
           toast.success("🚨 Order baru masuk!");
+        }
+
+        if (!res.ok) {
+          console.error(data);
+          setOrders([]); // 🔥 penting
+          return;
         }
 
         prevCountRef.current = data.length;
@@ -62,34 +68,22 @@ type Order = {
     };
 
     useEffect(() => {
-      const fetchOrders = () => {
-        fetch("http://localhost:5000/orders")
-          .then((res) => res.json())
-          .then((data) => {
-            console.log("DATA:", data);
+      const token = localStorage.getItem("token");
+      const role = localStorage.getItem("role");
 
-            if (Array.isArray(data)) {
-              setOrders(data);
-            } else {
-              setOrders([]);
-            }
+      if (!token || role !== "cashier") {
+        router.push("/login");
+        return;
+      }
 
-            setLoading(false);
-          })
-          .catch((err) => {
-            console.error(err);
-            setLoading(false);
-          });
-      };
+      setLoading(false);
 
       fetchOrders();
 
-      const interval = setInterval(() => {
-        fetchOrders();
-      }, 5000);
-
+      const interval = setInterval(fetchOrders, 3000);
       return () => clearInterval(interval);
-    }, []);
+
+  }, []);
 
   type OrderStatus = "pending" | "processing" | "completed" | "canceled";
 
@@ -130,19 +124,19 @@ type Order = {
   }
 
   const filteredOrders = orders.filter((order) => {
-    const matchStatus =
-      filter === "all" || order.status === filter;
+  const matchStatus =
+    filter === "all" || order.status === filter;
 
-    const matchSearch =
-      order.order_code?.toLowerCase().includes(search.toLowerCase()) ||
-      String(order.table_id).includes(search);
+  const matchSearch =
+    order.order_code?.toLowerCase().includes(search.toLowerCase()) ||
+    String(order.table_id).includes(search);
 
-    const matchTable =
-      tableFilter === "all" ||
-      String(order.table_id) === tableFilter;
+  const matchTable =
+    tableFilter === "all" ||
+    String(order.table_id) === tableFilter;
 
-    return matchStatus && matchSearch && matchTable;
-  });
+  return matchStatus && matchSearch && matchTable;
+});
 
   const pendingCount = orders.filter(
     (order) => order.status === "pending"
@@ -161,7 +155,7 @@ type Order = {
   ).length;
 
   const handlePrint = (order: any) => {
-    const itemsHtml = order.item
+    const itemsHtml = order.items
       .map(
         (item: any) => `
           <div style="display:flex; justify-content:space-between;">
@@ -366,10 +360,10 @@ type Order = {
           {/* ITEMS */}
           <h4 style={{ marginTop: 15 }}>🧾 Items:</h4>
 
-          {order.item.length === 0 ? (
+          {order.items.length === 0 ? (
             <p style={{ color: "red" }}>Kosong ❌</p>
           ) : (
-            order.item.map((item) => (
+            order.items.map((item) => (
               <div
                 key={item.id}
                 style={{

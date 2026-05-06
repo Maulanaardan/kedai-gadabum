@@ -1,48 +1,127 @@
-const { Order, OrderItem, Menu } = require("../models");
+const { Order, Table, OrderItem, Menu } = require("../models");
 
+// 🔥 CREATE ORDER (FIXED)
 exports.create = async (req, res) => {
   try {
-    const { tableNumber, items, total } = req.body || {};
+    const { tableNumber, item } = req.body;
 
-    if (!tableNumber || !items || !Array.isArray(items)) {
+    if (!tableNumber || !item || !Array.isArray(item)) {
       return res.status(400).json({
-        error: "Data tidak lengkap (tableNumber & items wajib)",
+        error: "Data tidak lengkap (tableNumber & item wajib)",
       });
     }
 
+    // 🔥 buat order dulu (total sementara 0)
     const order = await Order.create({
       table_id: tableNumber,
-      total_price: total,
+      total_price: 0,
       status: "pending",
+      payment_status: "unpaid",
       order_code: "ORD-" + Date.now(),
     });
 
-    await Promise.all(
-      items.map((item) =>
-        OrderItem.create({
-          order_id: order.id,
-          menu_item_id: item.id,
-          quantity: item.qty,
-          price: item.price,
-          sub_total: item.qty * item.price,
-        })
-      )
+    let total = 0;
+
+    // 🔥 loop item
+    for (const i of item) {
+      const menu = await Menu.findByPk(i.menu_id);
+
+      if (!menu) continue;
+
+      const sub_total = menu.price * i.quantity;
+      total += sub_total;
+
+      await OrderItem.create({
+        order_id: order.id,
+        menu_item_id: i.menu_id,
+        quantity: i.quantity,
+        price: menu.price, // ✅ dari DB
+        sub_total: sub_total,
+      });
+    }
+
+    // 🔥 update total setelah semua item
+    await Order.update(
+      { total_price: total },
+      { where: { id: order.id } }
     );
 
-    res.status(201).json({ message: "Order berhasil", order });
+    res.status(201).json({
+      message: "Order berhasil",
+      order,
+    });
   } catch (err) {
-    console.error(err);
+    console.error("🔥 ERROR CREATE ORDER:", err);
     res.status(500).json({ error: err.message });
   }
 };
 
+// 🔥 GET ALL (ADMIN / GLOBAL)
 exports.getAll = async (req, res) => {
   try {
     const orders = await Order.findAll({
       include: [
         {
           model: OrderItem,
-          as: "item",
+          as: "items",
+          include: [
+            {
+              model: Menu,
+              as: "menu",
+            },
+          ],
+        },
+        {
+          model: Table,
+          as: "table",
+        },
+      ],
+      order: [["createdAt", "DESC"]],
+    });
+
+    res.json(orders);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+};
+
+// 🔥 KHUSUS CASHIER (UNPAID)
+exports.getCashierOrders = async (req, res) => {
+  try {
+    const orders = await Order.findAll({
+      include: [
+        {
+          model: OrderItem,
+          as: "items",
+          include: [
+            {
+              model: Menu,
+              as: "menu", // 🔥 ini yang kurang
+            },
+          ],
+        },
+      ],
+      order: [["createdAt", "DESC"]],
+    });
+
+    res.json(orders);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: err.message });
+  }
+};
+
+// 🔥 GET PAID (KITCHEN)
+exports.getPaidOrders = async (req, res) => {
+  try {
+    const orders = await Order.findAll({
+      where: {
+        payment_status: "paid",
+      },
+      include: [
+        {
+          model: OrderItem,
+          as: "items",
           include: [
             {
               model: Menu,
@@ -60,6 +139,7 @@ exports.getAll = async (req, res) => {
   }
 };
 
+// 🔥 UPDATE STATUS (kitchen)
 exports.updateStatus = async (req, res) => {
   try {
     const { id } = req.params;
@@ -73,14 +153,15 @@ exports.updateStatus = async (req, res) => {
   }
 };
 
+// 🔥 UPDATE PAYMENT (cashier)
 exports.updatePayment = async (req, res) => {
   try {
     const { id } = req.params;
 
     await Order.update(
-      { 
+      {
         payment_status: "paid",
-        status: "processing" // 🔥 GANTI INI
+        status: "processing", // 🔥 masuk dapur
       },
       { where: { id } }
     );
@@ -91,33 +172,7 @@ exports.updatePayment = async (req, res) => {
   }
 };
 
-exports.getPaidOrders = async (req, res) => {
-  try {
-    const orders = await Order.findAll({
-      where: {
-        payment_status: "paid",
-      },
-      include: [
-        {
-          model: OrderItem,
-          as: "item",
-          include: [
-            {
-              model: Menu,
-              as: "menu",
-            },
-          ],
-        },
-      ],
-      order: [["createdAt", "DESC"]],
-    });
-
-    res.json(orders);
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
-};
-
+// 🔥 COMPLETE ORDER (kitchen selesai)
 exports.completeOrder = async (req, res) => {
   try {
     const { id } = req.params;
@@ -132,5 +187,3 @@ exports.completeOrder = async (req, res) => {
     res.status(500).json({ error: err.message });
   }
 };
-
-

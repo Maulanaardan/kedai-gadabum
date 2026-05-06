@@ -1,23 +1,47 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 
 export default function KitchenPage() {
   const [orders, setOrders] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const router = useRouter();
 
   const fetchOrders = async () => {
-    const res = await fetch("http://localhost:5000/orders");
+    const token = localStorage.getItem("token");
+    console.log("TOKEN:", token); // 🔥 taruh di sini
+
+
+    const res = await fetch("http://localhost:5000/orders/paid", {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    });
+    
     const data = await res.json();
-    setOrders(data);
+    setOrders(Array.isArray(data) ? data : []);
   };
 
   useEffect(() => {
-    fetchOrders();
-    const interval = setInterval(fetchOrders, 3000);
-    return () => clearInterval(interval);
-  }, []);
+  const token = localStorage.getItem("token");
+  const role = localStorage.getItem("role");
+
+  if (!token || role !== "kitchen") {
+    router.push("/login");
+    return;
+  }
+
+  setLoading(false);
+
+  fetchOrders();
+
+  const interval = setInterval(fetchOrders, 3000);
+  return () => clearInterval(interval);
+}, []);
 
   const handleComplete = async (id: number) => {
+    const token = localStorage.getItem("token");
     await fetch(`http://localhost:5000/orders/${id}/status`, {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
@@ -33,9 +57,9 @@ export default function KitchenPage() {
     );
   };
 
+  if (loading) return <div>Loading dashboard...</div>;
   const OrderCard = ({ order }: any) => {
     const minutes = getMinutes(order.createdAt);
-
     return (
       <div className="bg-zinc-900 rounded-2xl p-5 shadow-lg border border-zinc-800 hover:scale-[1.02] transition">
         {/* HEADER */}
@@ -59,7 +83,7 @@ export default function KitchenPage() {
 
         {/* ITEMS */}
         <div className="mt-3 space-y-1">
-          {order.item?.map((i: any) => (
+          {order.items?.map((i: any) => (
             <p key={i.id} className="text-sm">
               {i.menu?.name} x{i.quantity}
             </p>
@@ -94,7 +118,7 @@ export default function KitchenPage() {
 
           <div className="space-y-4">
             {orders
-              .filter((o) => o.status === "processing")
+              .filter((o) => o.status?.toLowerCase().trim() === "processing")
               .map((order) => (
                 <OrderCard key={order.id} order={order} />
               ))}
@@ -109,7 +133,7 @@ export default function KitchenPage() {
 
           <div className="space-y-4">
             {orders
-              .filter((o) => o.status === "completed")
+              .filter((o) => o.status?.toLowerCase().trim() === "completed")
               .map((order) => (
                 <OrderCard key={order.id} order={order} />
               ))}

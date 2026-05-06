@@ -11,6 +11,8 @@ router.post('/', orderController.create);
 // 🔒 ADMIN (lihat semua)
 router.get("/", authMiddleware, roleMiddleware(["admin"]), orderController.getAll);
 
+router.get("/cashier",authMiddleware,roleMiddleware(["cashier"]),orderController.getCashierOrders);
+
 // 🔒 KITCHEN (lihat yang sudah dibayar)
 router.get("/paid", authMiddleware, roleMiddleware(["kitchen"]), orderController.getPaidOrders);
 
