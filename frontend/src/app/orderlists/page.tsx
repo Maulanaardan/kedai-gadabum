@@ -69,9 +69,11 @@ type Order = {
 
     useEffect(() => {
       const token = localStorage.getItem("token");
-      const role = localStorage.getItem("role");
+      const roles = JSON.parse(
+        localStorage.getItem("roles") || "[]"
+      );
 
-      if (!token || role !== "cashier") {
+      if (!token || !roles.includes("cashier")) {
         router.push("/login");
         return;
       }
@@ -87,19 +89,26 @@ type Order = {
 
   type OrderStatus = "pending" | "processing" | "completed" | "canceled";
 
-  const updateStatus = async (id: number, status: OrderStatus) => {
+  const updateStatus = async (
+    id: number,
+    status: OrderStatus
+  ) => {
+    const token = localStorage.getItem("token");
+
     await fetch(`http://localhost:5000/orders/${id}/status`, {
       method: "PUT",
       headers: {
         "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
       },
       body: JSON.stringify({ status }),
     });
 
-    // 🔥 update state langsung
     setOrders((prev) =>
       prev.map((order) =>
-        order.id === id ? { ...order, status } : order
+        order.id === id
+          ? { ...order, status }
+          : order
       )
     );
   };

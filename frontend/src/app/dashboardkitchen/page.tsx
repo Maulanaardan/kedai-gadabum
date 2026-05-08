@@ -25,9 +25,11 @@ export default function KitchenPage() {
 
   useEffect(() => {
   const token = localStorage.getItem("token");
-  const role = localStorage.getItem("role");
+  const roles = JSON.parse(
+    localStorage.getItem("roles") || "[]"
+  );
 
-  if (!token || role !== "kitchen") {
+  if (!token || !roles.includes("kitchen")) {
     router.push("/login");
     return;
   }

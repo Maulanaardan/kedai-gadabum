@@ -17,7 +17,7 @@ router.get("/cashier",authMiddleware,roleMiddleware(["cashier"]),orderController
 router.get("/paid", authMiddleware, roleMiddleware(["kitchen"]), orderController.getPaidOrders);
 
 // 🔒 KITCHEN (update status masak)
-router.put("/:id/status", authMiddleware, roleMiddleware(["kitchen"]), orderController.updateStatus);
+router.put("/:id/status", authMiddleware, roleMiddleware(["kitchen","cashier"]), orderController.updateStatus);
 
 // 🔒 CASHIER / ADMIN (bayar)
 router.put("/:id/pay", authMiddleware, roleMiddleware(["cashier", "admin"]), orderController.updatePayment);

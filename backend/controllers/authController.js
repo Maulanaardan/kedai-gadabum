@@ -8,24 +8,49 @@ exports.login = async (req, res) => {
   const user = await User.findOne({ where: { username } });
 
   if (!user) {
-    return res.status(404).json({ error: "User tidak ditemukan" });
+    return res.status(404).json({
+      error: "User tidak ditemukan",
+    });
   }
 
-  const match = await bcrypt.compare(password, user.password);
+  const match = await bcrypt.compare(
+    password,
+    user.password
+  );
 
   if (!match) {
-    return res.status(400).json({ error: "Password salah" });
+    return res.status(400).json({
+      error: "Password salah",
+    });
   }
 
-  // 🔥 INI BAGIAN TOKEN
+  const roles = user.roles;
+
   const token = jwt.sign(
-    { id: user.id, role: user.role },
+    {
+      id: user.id,
+      roles,
+    },
     "SECRET_KEY",
-    { expiresIn: "1d" }
+    {
+      expiresIn: "1d",
+    }
   );
+
+  // 🔥 redirect otomatis
+  let redirect = "/login";
+
+  if (roles.includes("admin")) {
+    redirect = "/dashboard";
+  } else if (roles.includes("cashier")) {
+    redirect = "/orderlists";
+  } else if (roles.includes("kitchen")) {
+    redirect = "/dashboardkitchen";
+  }
 
   res.json({
     token,
-    role: user.role,
+    roles,
+    redirect,
   });
 };

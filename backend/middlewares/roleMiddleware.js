@@ -1,13 +1,20 @@
 module.exports = (allowedRoles) => {
   return (req, res, next) => {
-    const user = req.user; // dari authMiddleware
+    let userRoles = req.user.roles;
 
-    if (!user) {
-      return res.status(401).json({ message: "Unauthorized" });
+    // 🔥 kalau string -> ubah jadi array
+    if (!Array.isArray(userRoles)) {
+      userRoles = [userRoles];
     }
 
-    if (!allowedRoles.includes(user.role)) {
-      return res.status(403).json({ message: "Forbidden" });
+    const hasRole = userRoles.some((role) =>
+      allowedRoles.includes(role)
+    );
+
+    if (!hasRole) {
+      return res.status(403).json({
+        message: "Forbidden",
+      });
     }
 
     next();

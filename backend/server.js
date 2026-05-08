@@ -20,7 +20,7 @@ app.use("/auth", authRoutes);
 const PORT = process.env.PORT || 5000;
 
 // 🔥 UBAH JADI BEGINI
-sequelize.sync({ alter: true }).then( async() => {
+sequelize.sync().then( async() => {
   console.log("Database synced");
 
   app.listen(PORT, () => {
@@ -34,10 +34,22 @@ const { User } = require("./models");
 
 const createUsers = async () => {
   const users = [
-    { username: "admin", password: "admin123", role: "admin" },
-    { username: "kitchen", password: "123", role: "kitchen" },
-    { username: "kasir", password: "123", role: "cashier" },
-  ];
+  {
+    username: "admin",
+    password: "admin123",
+    roles: ["admin"],
+  },
+  {
+    username: "kitchen",
+    password: "123",
+    roles: ["kitchen"],
+  },
+  {
+    username: "cashier",
+    password: "123",
+    roles: ["cashier"],
+  },
+];
 
   for (let u of users) {
     const existing = await User.findOne({ where: { username: u.username } });

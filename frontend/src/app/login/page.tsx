@@ -10,34 +10,33 @@ export default function LoginPage() {
 
   
   const handleLogin = async () => {
-  const res = await fetch("http://localhost:5000/auth/login", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({ username, password }),
-  });
+    const res = await fetch("http://localhost:5000/auth/login", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ username, password }),
+    });
 
-  const data = await res.json();
-  console.log("LOGIN RESPONSE:", data);
+    const data = await res.json();
 
-  if (!res.ok) {
-    alert(data.error || "Login gagal");
-    return;
-  }
+    console.log("LOGIN RESPONSE:", data);
 
-  // ✅ FIX DI SINI
-  localStorage.setItem("token", data.token);
-  localStorage.setItem("role", data.role);
+    if (!res.ok) {
+      alert(data.error || "Login gagal");
+      return;
+    }
 
-  // ✅ redirect
-  if (data.role === "admin") {
-    router.push("/dashboard");
-  } else if (data.role === "kitchen") {
-    router.push("/dashboardkitchen");
-  } else if (data.role === "cashier") {
-    router.push("/orderlists");
-  }
+    // 🔥 ubah jadi array
+    const roles = Array.isArray(data.roles)
+      ? data.roles
+      : [data.roles];
+
+    localStorage.setItem("token", data.token);
+    localStorage.setItem("roles", JSON.stringify(roles));
+
+    // 🔥 redirect
+    router.push(data.redirect);
   };
 
   return (
