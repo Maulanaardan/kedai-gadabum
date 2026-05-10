@@ -68,9 +68,9 @@ type Order = {
     };
 
     useEffect(() => {
-      const token = localStorage.getItem("token");
+      const token = sessionStorage.getItem("token");
       const roles = JSON.parse(
-        localStorage.getItem("roles") || "[]"
+        sessionStorage.getItem("roles") || "[]"
       );
 
       if (!token || !roles.includes("cashier")) {
@@ -93,7 +93,7 @@ type Order = {
     id: number,
     status: OrderStatus
   ) => {
-    const token = localStorage.getItem("token");
+    const token = sessionStorage.getItem("token");
 
     await fetch(`http://localhost:5000/orders/${id}/status`, {
       method: "PUT",
@@ -121,7 +121,7 @@ type Order = {
         return "#60a5fa"; // biru
       case "completed":
         return "#4ade80"; // hijau
-      case "canceled":
+      case "cancelled":
         return "#f87171"; // merah
       default:
         return "#ccc";
@@ -369,7 +369,7 @@ type Order = {
           {/* ITEMS */}
           <h4 style={{ marginTop: 15 }}>🧾 Items:</h4>
 
-          {order.items.length === 0 ? (
+          {order.items?.length === 0 ? (
             <p style={{ color: "red" }}>Kosong ❌</p>
           ) : (
             order.items.map((item) => (

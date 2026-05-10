@@ -9,7 +9,7 @@ export default function KitchenPage() {
   const router = useRouter();
 
   const fetchOrders = async () => {
-    const token = localStorage.getItem("token");
+    const token = sessionStorage.getItem("token");
     console.log("TOKEN:", token); // 🔥 taruh di sini
 
 
@@ -24,9 +24,9 @@ export default function KitchenPage() {
   };
 
   useEffect(() => {
-  const token = localStorage.getItem("token");
+  const token = sessionStorage.getItem("token");
   const roles = JSON.parse(
-    localStorage.getItem("roles") || "[]"
+    sessionStorage.getItem("roles") || "[]"
   );
 
   if (!token || !roles.includes("kitchen")) {
@@ -43,11 +43,17 @@ export default function KitchenPage() {
 }, []);
 
   const handleComplete = async (id: number) => {
-    const token = localStorage.getItem("token");
+    const token = sessionStorage.getItem("token");
+
     await fetch(`http://localhost:5000/orders/${id}/status`, {
       method: "PUT",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ status: "completed" }),
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify({
+        status: "completed",
+      }),
     });
 
     fetchOrders();

@@ -32,8 +32,8 @@ export default function LoginPage() {
       ? data.roles
       : [data.roles];
 
-    localStorage.setItem("token", data.token);
-    localStorage.setItem("roles", JSON.stringify(roles));
+    sessionStorage.setItem("token", data.token);
+    sessionStorage.setItem("roles", JSON.stringify(roles));
 
     // 🔥 redirect
     router.push(data.redirect);

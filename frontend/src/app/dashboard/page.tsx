@@ -62,7 +62,7 @@ export default function DashboardPage() {
 
  const fetchOrders = async () => {
   try {
-    const token = localStorage.getItem("token");
+    const token = sessionStorage.getItem("token");
 
     const res = await fetch("http://localhost:5000/orders", {
       headers: {
@@ -93,8 +93,8 @@ export default function DashboardPage() {
   };
 
   useEffect(() => {
-    const token = localStorage.getItem("token");
-    const role = localStorage.getItem("role");
+    const token = sessionStorage.getItem("token");
+    const role = sessionStorage.getItem("role");
 
     if (!token || role !== "admin") {
       router.push("/login");

@@ -1,5 +1,5 @@
 export const fetchWithAuth = async (url: string, options: any = {}) => {
-  const token = localStorage.getItem("token");
+  const token = sessionStorage.getItem("token");
 
   return fetch(url, {
     ...options,
