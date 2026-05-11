@@ -33,66 +33,56 @@ type Order = {
   items: OrderItem[];
 };
 
-  export default function OrdersPage() {
-    const [orders, setOrders] = useState<Order[]>([]);
-    const prevCountRef = useRef(0);
-    const router = useRouter();
-    const [filter, setFilter] = useState("all");
-    const [loading, setLoading] = useState(true);
-    const [search, setSearch] = useState("");
-    const [tableFilter, setTableFilter] = useState("all");
+export default function OrdersPage() {
+  const [orders, setOrders] = useState<Order[]>([]);
+  const prevCountRef = useRef(0);
+  const router = useRouter();
+  const [filter, setFilter] = useState("all");
+  const [loading, setLoading] = useState(true);
+  const [search, setSearch] = useState("");
+  const [tableFilter, setTableFilter] = useState("all");
 
-    const fetchOrders = async () => {
-      try {
-        const res = await fetchWithAuth("http://localhost:5000/orders/cashier");
-        const data = await res.json();
+  const fetchOrders = async () => {
+    try {
+      const res = await fetchWithAuth("http://localhost:5000/orders/cashier");
+      const data = await res.json();
 
-        if (
-          prevCountRef.current !== 0 &&
-          data.length > prevCountRef.current
-        ) {
-          toast.success("🚨 Order baru masuk!");
-        }
-
-        if (!res.ok) {
-          console.error(data);
-          setOrders([]); // 🔥 penting
-          return;
-        }
-
-        prevCountRef.current = data.length;
-        setOrders(data);
-      } catch (err) {
-        console.error(err);
+      if (prevCountRef.current !== 0 && data.length > prevCountRef.current) {
+        toast.success("🚨 Order baru masuk!");
       }
-    };
 
-    useEffect(() => {
-      const token = sessionStorage.getItem("token");
-      const roles = JSON.parse(
-        sessionStorage.getItem("roles") || "[]"
-      );
-
-      if (!token || !roles.includes("cashier")) {
-        router.push("/login");
+      if (!res.ok) {
+        console.error(data);
+        setOrders([]);
         return;
       }
 
-      setLoading(false);
+      prevCountRef.current = data.length;
+      setOrders(data);
+    } catch (err) {
+      console.error(err);
+    }
+  };
 
-      fetchOrders();
+  useEffect(() => {
+    const token = sessionStorage.getItem("token");
+    const roles = JSON.parse(sessionStorage.getItem("roles") || "[]");
 
-      const interval = setInterval(fetchOrders, 3000);
-      return () => clearInterval(interval);
+    if (!token || !roles.includes("cashier")) {
+      router.push("/login");
+      return;
+    }
 
+    setLoading(false);
+    fetchOrders();
+
+    const interval = setInterval(fetchOrders, 3000);
+    return () => clearInterval(interval);
   }, []);
 
   type OrderStatus = "pending" | "processing" | "completed" | "canceled";
 
-  const updateStatus = async (
-    id: number,
-    status: OrderStatus
-  ) => {
+  const updateStatus = async (id: number, status: OrderStatus) => {
     const token = sessionStorage.getItem("token");
 
     await fetch(`http://localhost:5000/orders/${id}/status`, {
@@ -105,75 +95,56 @@ type Order = {
     });
 
     setOrders((prev) =>
-      prev.map((order) =>
-        order.id === id
-          ? { ...order, status }
-          : order
-      )
+      prev.map((order) => (order.id === id ? { ...order, status } : order))
     );
   };
 
   const getStatusColor = (status: string) => {
     switch (status) {
-      case "pending":
-        return "#facc15"; // kuning
-      case "processing":
-        return "#60a5fa"; // biru
-      case "completed":
-        return "#4ade80"; // hijau
-      case "cancelled":
-        return "#f87171"; // merah
-      default:
-        return "#ccc";
+      case "pending":     return "#facc15";
+      case "processing":  return "#60a5fa";
+      case "completed":   return "#4ade80";
+      case "cancelled":   return "#f87171";
+      default:            return "#ccc";
     }
   };
 
   if (loading) {
-    return <div>Loading...</div>;
+    return (
+      <>
+        <style>{`
+          @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700&family=DM+Sans:wght@300;400;500&display=swap');
+          body { margin: 0; background: #0f0e0c; }
+          .cp-loading {
+            min-height: 100vh; display: flex; align-items: center; justify-content: center;
+            background: #0f0e0c; font-family: 'DM Sans', sans-serif;
+            color: #e8c97a; font-size: 13px; letter-spacing: 0.15em; text-transform: uppercase;
+          }
+        `}</style>
+        <div className="cp-loading">Loading...</div>
+      </>
+    );
   }
 
   const filteredOrders = orders.filter((order) => {
-  const matchStatus =
-    filter === "all" || order.status === filter;
+    const matchStatus  = filter === "all" || order.status === filter;
+    const matchSearch  = order.order_code?.toLowerCase().includes(search.toLowerCase()) || String(order.table_id).includes(search);
+    const matchTable   = tableFilter === "all" || String(order.table_id) === tableFilter;
+    return matchStatus && matchSearch && matchTable;
+  });
 
-  const matchSearch =
-    order.order_code?.toLowerCase().includes(search.toLowerCase()) ||
-    String(order.table_id).includes(search);
-
-  const matchTable =
-    tableFilter === "all" ||
-    String(order.table_id) === tableFilter;
-
-  return matchStatus && matchSearch && matchTable;
-});
-
-  const pendingCount = orders.filter(
-    (order) => order.status === "pending"
-  ).length;
-
-  const processingCount = orders.filter(
-    (order) => order.status === "processing"
-  ).length;
-
-  const completedCount = orders.filter(
-    (order) => order.status === "completed"
-  ).length;
-
-  const canceledCount = orders.filter(
-    (order) => order.status === "canceled"
-  ).length;
+  const pendingCount    = orders.filter((o) => o.status === "pending").length;
+  const processingCount = orders.filter((o) => o.status === "processing").length;
+  const completedCount  = orders.filter((o) => o.status === "completed").length;
+  const canceledCount   = orders.filter((o) => o.status === "canceled").length;
 
   const handlePrint = (order: any) => {
-    const itemsHtml = order.items
-      .map(
-        (item: any) => `
-          <div style="display:flex; justify-content:space-between;">
-            <span>${item.menu?.name ?? "Menu"}</span>
-            <span>${item.quantity} x ${item.price}</span>
-          </div>
-        `
-      )
-      .join("");
+    const itemsHtml = order.items.map((item: any) => `
+      <div style="display:flex; justify-content:space-between;">
+        <span>${item.menu?.name ?? "Menu"}</span>
+        <span>${item.quantity} x ${item.price}</span>
+      </div>
+    `).join("");
 
     const content = `
       <div style="font-family: monospace; width: 250px;">
@@ -198,279 +169,433 @@ type Order = {
     win?.print();
   };
 
+  const STATUS_FILTERS = [
+    { key: "all",        label: "Semua" },
+    { key: "pending",    label: "Pending" },
+    { key: "processing", label: "Processing" },
+    { key: "completed",  label: "Completed" },
+    { key: "canceled",   label: "Canceled" },
+  ];
+
+  const STAT_CARDS = [
+    { label: "Pending",    count: pendingCount,    color: "#c9a840", bg: "#c9a84015", border: "#c9a84030" },
+    { label: "Processing", count: processingCount, color: "#60a5fa", bg: "#60a5fa15", border: "#60a5fa30" },
+    { label: "Completed",  count: completedCount,  color: "#4ade80", bg: "#4ade8015", border: "#4ade8030" },
+    { label: "Canceled",   count: canceledCount,   color: "#f87171", bg: "#f8717115", border: "#f8717130" },
+  ];
+
   return (
-    <div style={{ padding: 20 }}>
-      <div style={{ display: "flex", gap: 10, marginBottom: 20 }}>
-      <LogoutButton />
-      <button onClick={() => setFilter("all")}>All</button>
-      <button onClick={() => setFilter("pending")} 
-        style={{
-          padding: "8px 14px",
-          borderRadius: 8,
-          border: "none",
-          cursor: "pointer",
-          background: filter === "pending" ? "#facc15" : "#e5e7eb",
-      }}>Pending</button>
-      <button onClick={() => setFilter("processing")}
-        style={{
-          padding: "8px 14px",
-          borderRadius: 8,
-          border: "none",
-          cursor: "pointer",
-          background: filter === "processing" ? "#facc15" : "#e5e7eb"
-      }}>Processing</button>
-      <button onClick={() => setFilter("completed")}
-        style={{
-          padding: "8px 14px",
-          borderRadius: 8,
-          border: "none",
-          cursor: "pointer",
-          background: filter === "completed" ? "#facc15" : "#e5e7eb"
-      }}>Completed</button>
-      <button onClick={() => setFilter("canceled")}
-        style={{
-          padding: "8px 14px",
-          borderRadius: 8,
-          border: "none",
-          cursor: "pointer",
-          background: filter === "cancelled" ? "#facc15" : "#e5e7eb"
-      }}>Canceled</button>
-    </div>
-      <h1>📋 Daftar Order</h1>
-      <div
-        style={{
-          display: "grid",
-          gridTemplateColumns: "repeat(4, 1fr)",
-          gap: 15,
-          marginBottom: 20,
-        }}
-      >
-        <div
-          style={{
-            background: "#facc15",
-            color: "#000",
-            padding: 15,
-            borderRadius: 12,
-            fontWeight: "bold",
-          }}
-        >
-          Pending: {pendingCount}
-        </div>
+    <>
+      <style>{`
+        @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700&family=DM+Sans:wght@300;400;500&display=swap');
 
-        <div
-          style={{
-            background: "#60a5fa",
-            color: "#fff",
-            padding: 15,
-            borderRadius: 12,
-            fontWeight: "bold",
-          }}
-        >
-          Processing: {processingCount}
-        </div>
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+        body { background: #0f0e0c; }
 
-        <div
-          style={{
-            background: "#4ade80",
-            color: "#fff",
-            padding: 15,
-            borderRadius: 12,
-            fontWeight: "bold",
-          }}
-        >
-          Completed: {completedCount}
-        </div>
+        .cp-root {
+          min-height: 100vh;
+          background: #0f0e0c;
+          color: #f0ece3;
+          font-family: 'DM Sans', sans-serif;
+        }
 
-        <div
-          style={{
-            background: "#f87171",
-            color: "#fff",
-            padding: 15,
-            borderRadius: 12,
-            fontWeight: "bold",
-          }}
-        >
-          Canceled: {canceledCount}
-        </div>
-      </div>
+        /* HEADER */
+        .cp-header {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          padding: 20px 36px;
+          border-bottom: 1px solid #2a2825;
+          position: sticky; top: 0;
+          background: #0f0e0c;
+          z-index: 20;
+        }
+        .cp-brand {
+          font-family: 'Playfair Display', serif;
+          font-size: 22px;
+          color: #e8c97a;
+        }
+        .cp-header-right { display: flex; align-items: center; gap: 12px; }
+        .cp-live-pill {
+          display: flex; align-items: center; gap: 8px;
+          background: #1e1c19; border: 1px solid #2e2c29;
+          border-radius: 50px; padding: 8px 18px;
+          font-size: 11px; letter-spacing: 0.12em;
+          text-transform: uppercase; color: #7a7260;
+        }
+        .cp-live-dot {
+          width: 7px; height: 7px; border-radius: 50%;
+          background: #e8c97a;
+          animation: glow 1.6s infinite;
+        }
+        @keyframes glow {
+          0%,100% { opacity:1; box-shadow:0 0 0 0 #e8c97a55; }
+          50%      { opacity:.7; box-shadow:0 0 0 5px transparent; }
+        }
 
-      <div
-        style={{
-          display: "flex",
-          gap: 10,
-          marginBottom: 20,
-          marginTop: 20,
-        }}
-      >
-        <input
-          type="text"
-          placeholder="Cari order code / meja..."
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          style={{
-            flex: 1,
-            padding: 10,
-            borderRadius: 8,
-            border: "1px solid #ccc",
-          }}
-        />
+        /* BODY */
+        .cp-body { padding: 32px 36px; max-width: 1100px; margin: 0 auto; }
 
-        <select
-          value={tableFilter}
-          onChange={(e) => setTableFilter(e.target.value)}
-          style={{
-            padding: 10,
-            borderRadius: 8,
-            border: "1px solid #ccc",
-          }}
-        >
-          <option value="all">Semua Meja</option>
-          <option value="1">Table 1</option>
-          <option value="2">Table 2</option>
-          <option value="3">Table 3</option>
-          <option value="4">Table 4</option>
-        </select>
-      </div>
+        /* STAT CARDS */
+        .cp-stats {
+          display: grid;
+          grid-template-columns: repeat(4, 1fr);
+          gap: 14px;
+          margin-bottom: 28px;
+        }
+        .cp-stat {
+          border-radius: 12px;
+          padding: 18px 20px;
+          border: 1px solid;
+        }
+        .cp-stat-label {
+          font-size: 10px;
+          letter-spacing: 0.16em;
+          text-transform: uppercase;
+          margin-bottom: 8px;
+          opacity: 0.7;
+        }
+        .cp-stat-count {
+          font-family: 'Playfair Display', serif;
+          font-size: 30px;
+          line-height: 1;
+        }
 
-      {filteredOrders.map((order) => (
-        <div
-          key={order.id}
-          style={{
-            border: "1px solid #e5e7eb",
-            borderRadius: 16,
-            padding: 20,
-            marginBottom: 20,
-            boxShadow: "0 4px 10px rgba(0,0,0,0.05)",
-            background: "#023644",
-          }}
-        >
-          {/* HEADER */}
-          <div style={{ display: "flex", justifyContent: "space-between" }}>
-            <h3 style={{ fontWeight: "bold" }}>
-              {order.order_code || "No Code"}
-            </h3>
+        /* FILTER BAR */
+        .cp-filters {
+          display: flex;
+          gap: 8px;
+          margin-bottom: 20px;
+          flex-wrap: wrap;
+        }
+        .cp-filter-btn {
+          padding: 8px 18px;
+          border-radius: 50px;
+          border: 1px solid #2a2825;
+          background: #161410;
+          color: #7a7260;
+          font-family: 'DM Sans', sans-serif;
+          font-size: 12px;
+          font-weight: 500;
+          letter-spacing: 0.06em;
+          cursor: pointer;
+          transition: all 0.15s;
+        }
+        .cp-filter-btn:hover { border-color: #e8c97a44; color: #c0b090; }
+        .cp-filter-btn--active {
+          background: linear-gradient(135deg, #e8c97a, #c9a840);
+          color: #0f0e0c;
+          border-color: transparent;
+          font-weight: 700;
+        }
 
-            <span
-              style={{
-                background: getStatusColor(order.status),
-                padding: "4px 10px",
-                borderRadius: 999,
-                fontSize: 12,
-                fontWeight: "bold",
-              }}
-            >
-              {order.status}
-            </span>
+        /* SEARCH ROW */
+        .cp-search-row {
+          display: flex;
+          gap: 12px;
+          margin-bottom: 28px;
+        }
+        .cp-search-input {
+          flex: 1;
+          padding: 10px 16px;
+          background: #161410;
+          border: 1px solid #2a2825;
+          border-radius: 8px;
+          color: #f0ece3;
+          font-family: 'DM Sans', sans-serif;
+          font-size: 13px;
+          outline: none;
+          transition: border-color 0.2s;
+        }
+        .cp-search-input::placeholder { color: #3a3628; }
+        .cp-search-input:focus { border-color: #e8c97a44; }
+        .cp-table-select {
+          padding: 10px 16px;
+          background: #161410;
+          border: 1px solid #2a2825;
+          border-radius: 8px;
+          color: #a09880;
+          font-family: 'DM Sans', sans-serif;
+          font-size: 13px;
+          outline: none;
+          cursor: pointer;
+          appearance: none;
+          min-width: 140px;
+          transition: border-color 0.2s;
+        }
+        .cp-table-select:focus { border-color: #e8c97a44; }
+
+        /* ORDER CARD */
+        .cp-order-card {
+          background: #161410;
+          border: 1px solid #232017;
+          border-radius: 12px;
+          padding: 24px;
+          margin-bottom: 16px;
+          transition: border-color 0.2s, transform 0.15s;
+        }
+        .cp-order-card:hover { border-color: #e8c97a22; transform: translateY(-1px); }
+
+        .cp-order-head {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          margin-bottom: 10px;
+        }
+        .cp-order-code {
+          font-family: 'Playfair Display', serif;
+          font-size: 18px;
+          color: #f0ece3;
+        }
+        .cp-status-pill {
+          padding: 4px 12px;
+          border-radius: 50px;
+          font-size: 11px;
+          font-weight: 700;
+          letter-spacing: 0.08em;
+          text-transform: uppercase;
+          color: #0f0e0c;
+        }
+
+        .cp-order-meta {
+          display: flex;
+          gap: 20px;
+          margin-bottom: 18px;
+        }
+        .cp-meta-item {
+          font-size: 12px;
+          color: #5c5848;
+          letter-spacing: 0.06em;
+        }
+        .cp-meta-item span {
+          color: #c0b090;
+          font-weight: 500;
+        }
+
+        /* ITEMS TABLE */
+        .cp-items-label {
+          font-size: 10px;
+          letter-spacing: 0.16em;
+          text-transform: uppercase;
+          color: #5c5848;
+          margin-bottom: 10px;
+        }
+        .cp-item-row {
+          display: flex;
+          justify-content: space-between;
+          align-items: baseline;
+          padding: 7px 0;
+          border-bottom: 1px solid #1e1c19;
+          font-size: 13px;
+        }
+        .cp-item-row:last-child { border-bottom: none; }
+        .cp-item-name { color: #c0b8a8; }
+        .cp-item-price { color: #e8c97a; font-weight: 600; }
+        .cp-items-empty { font-size: 13px; color: #5c5848; padding: 8px 0; }
+
+        /* DIVIDER */
+        .cp-divider { height: 1px; background: #1e1c19; margin: 18px 0; }
+
+        /* ACTIONS */
+        .cp-actions { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
+        .cp-action-btn {
+          padding: 9px 18px;
+          border: none;
+          border-radius: 8px;
+          font-family: 'DM Sans', sans-serif;
+          font-size: 12px;
+          font-weight: 600;
+          letter-spacing: 0.06em;
+          text-transform: uppercase;
+          cursor: pointer;
+          transition: opacity 0.15s, transform 0.1s;
+        }
+        .cp-action-btn:hover  { opacity: 0.88; }
+        .cp-action-btn:active { transform: scale(0.97); }
+        .cp-btn-process { background: #60a5fa22; color: #60a5fa; border: 1px solid #60a5fa33; }
+        .cp-btn-cancel  { background: #f8717122; color: #f87171; border: 1px solid #f8717133; }
+        .cp-btn-print   {
+          background: linear-gradient(135deg, #e8c97a, #c9a840);
+          color: #0f0e0c;
+          margin-left: auto;
+        }
+        .cp-status-done     { font-size: 12px; color: #4ade80; font-weight: 600; letter-spacing: 0.06em; }
+        .cp-status-canceled { font-size: 12px; color: #f87171; font-weight: 600; letter-spacing: 0.06em; }
+
+        /* EMPTY STATE */
+        .cp-empty {
+          text-align: center; padding: 80px 20px;
+          color: #2a2820; font-size: 12px;
+          letter-spacing: 0.16em; text-transform: uppercase;
+        }
+        .cp-empty-icon { font-size: 32px; margin-bottom: 14px; opacity: 0.2; }
+
+        ::-webkit-scrollbar { width: 4px; }
+        ::-webkit-scrollbar-thumb { background: #2a2825; border-radius: 4px; }
+      `}</style>
+
+      <div className="cp-root">
+        {/* HEADER */}
+        <header className="cp-header">
+          <div className="cp-brand">Kasir</div>
+          <div className="cp-header-right">
+            <div className="cp-live-pill">
+              <div className="cp-live-dot" />
+              Live
+            </div>
+            <LogoutButton />
+          </div>
+        </header>
+
+        <div className="cp-body">
+          {/* STAT CARDS */}
+          <div className="cp-stats">
+            {STAT_CARDS.map((s) => (
+              <div
+                key={s.label}
+                className="cp-stat"
+                style={{ background: s.bg, borderColor: s.border, color: s.color }}
+              >
+                <div className="cp-stat-label">{s.label}</div>
+                <div className="cp-stat-count">{s.count}</div>
+              </div>
+            ))}
           </div>
 
-          <p>Table: {order.table_id}</p>
-          <p>Total: Rp {order.total_price}</p>
-
-          {/* ITEMS */}
-          <h4 style={{ marginTop: 15 }}>🧾 Items:</h4>
-
-          {order.items?.length === 0 ? (
-            <p style={{ color: "red" }}>Kosong ❌</p>
-          ) : (
-            order.items.map((item) => (
-              <div
-                key={item.id}
-                style={{
-                  display: "flex",
-                  justifyContent: "space-between",
-                  borderBottom: "1px dashed #ddd",
-                  padding: "4px 0",
-                }}
+          {/* FILTER BUTTONS */}
+          <div className="cp-filters">
+            {STATUS_FILTERS.map((f) => (
+              <button
+                key={f.key}
+                className={`cp-filter-btn ${filter === f.key ? "cp-filter-btn--active" : ""}`}
+                onClick={() => setFilter(f.key)}
               >
-                <div key={item.id}>
-                  🍽 {item.menu?.name?? "Unknown"}  
-                  <br />
-                  {item.quantity} x Rp {item.price}
+                {f.label}
+              </button>
+            ))}
+          </div>
+
+          {/* SEARCH + TABLE FILTER */}
+          <div className="cp-search-row">
+            <input
+              className="cp-search-input"
+              type="text"
+              placeholder="Cari order code / meja..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+            />
+            <select
+              className="cp-table-select"
+              value={tableFilter}
+              onChange={(e) => setTableFilter(e.target.value)}
+            >
+              <option value="all">Semua Meja</option>
+              <option value="1">Table 1</option>
+              <option value="2">Table 2</option>
+              <option value="3">Table 3</option>
+              <option value="4">Table 4</option>
+            </select>
+          </div>
+
+          {/* ORDER LIST */}
+          {filteredOrders.length === 0 ? (
+            <div className="cp-empty">
+              <div className="cp-empty-icon">📋</div>
+              <div>Tidak ada order ditemukan</div>
+            </div>
+          ) : (
+            filteredOrders.map((order) => (
+              <div key={order.id} className="cp-order-card">
+                {/* HEAD */}
+                <div className="cp-order-head">
+                  <div className="cp-order-code">
+                    {order.order_code || "No Code"}
+                  </div>
+                  <span
+                    className="cp-status-pill"
+                    style={{ background: getStatusColor(order.status) }}
+                  >
+                    {order.status}
+                  </span>
+                </div>
+
+                {/* META */}
+                <div className="cp-order-meta">
+                  <div className="cp-meta-item">
+                    Meja <span>{order.table_id}</span>
+                  </div>
+                  <div className="cp-meta-item">
+                    Total <span>Rp {Number(order.total_price).toLocaleString("id-ID")}</span>
+                  </div>
+                </div>
+
+                {/* ITEMS */}
+                <div className="cp-items-label">Items</div>
+                {order.items?.length === 0 ? (
+                  <div className="cp-items-empty">Tidak ada item</div>
+                ) : (
+                  order.items.map((item) => (
+                    <div key={item.id} className="cp-item-row">
+                      <span className="cp-item-name">
+                        {item.menu?.name ?? "Unknown"} × {item.quantity}
+                      </span>
+                      <span className="cp-item-price">
+                        Rp {(Number(item.price) * item.quantity).toLocaleString("id-ID")}
+                      </span>
+                    </div>
+                  ))
+                )}
+
+                <div className="cp-divider" />
+
+                {/* ACTIONS */}
+                <div className="cp-actions">
+                  {order.status === "pending" && (
+                    <>
+                      <button
+                        className="cp-action-btn cp-btn-process"
+                        onClick={() => updateStatus(order.id, "processing")}
+                      >
+                        Proses
+                      </button>
+                      <button
+                        className="cp-action-btn cp-btn-cancel"
+                        onClick={() => updateStatus(order.id, "canceled")}
+                      >
+                        Batal
+                      </button>
+                    </>
+                  )}
+
+                  {order.status === "processing" && (
+                    <button
+                      className="cp-action-btn cp-btn-cancel"
+                      onClick={() => updateStatus(order.id, "canceled")}
+                    >
+                      Batal
+                    </button>
+                  )}
+
+                  {order.status === "completed" && (
+                    <span className="cp-status-done">✓ Order selesai</span>
+                  )}
+
+                  {order.status === "canceled" && (
+                    <span className="cp-status-canceled">✕ Order dibatalkan</span>
+                  )}
+
+                  <button
+                    className="cp-action-btn cp-btn-print"
+                    onClick={() => handlePrint(order)}
+                  >
+                    🧾 Print
+                  </button>
                 </div>
               </div>
             ))
           )}
-
-           {/* ACTION BUTTON */}
-          <div style={{ display: "flex", gap: 10, marginTop: 15 }}>
-            {order.status === "pending" && (
-              <>
-                <button
-                  onClick={() => updateStatus(order.id, "processing")}
-                  style={{
-                    background: "#60a5fa",
-                    color: "#fff",
-                    padding: "8px 14px",
-                    border: "none",
-                    borderRadius: 8,
-                    cursor: "pointer",
-                  }}
-                >
-                  Proses
-                </button>
-
-                <button
-                  onClick={() => updateStatus(order.id, "canceled")}
-                  style={{
-                    background: "#f87171",
-                    color: "#fff",
-                    padding: "8px 14px",
-                    border: "none",
-                    borderRadius: 8,
-                    cursor: "pointer",
-                  }}
-                >
-                  Batal
-                </button>
-              </>
-            )}
-
-            {order.status === "processing" && (
-              <>
-                <button
-                  onClick={() => updateStatus(order.id, "canceled")}
-                  style={{
-                    background: "#f87171",
-                    color: "#fff",
-                    padding: "8px 14px",
-                    border: "none",
-                    borderRadius: 8,
-                    cursor: "pointer",
-                  }}
-                >
-                  Batal
-                </button>
-              </>
-            )}
-
-            {order.status === "completed" && (
-              <span style={{ color: "#4ade80", fontWeight: "bold" }}>
-                ✅ Order selesai
-              </span>
-            )}
-
-            {order.status === "canceled" && (
-              <span style={{ color: "#f87171", fontWeight: "bold" }}>
-                ❌ Order dibatalkan
-              </span>
-            )}
-
-            <button
-              onClick={() => handlePrint(order)}
-              style={{
-                background: "#facc15",
-                color: "#000",
-                padding: "8px 14px",
-                border: "none",
-                borderRadius: 8,
-                cursor: "pointer",
-              }}
-            >
-              🧾 Print
-            </button>
-          </div>
         </div>
-      ))}
-    </div>
+      </div>
+    </>
   );
 }
