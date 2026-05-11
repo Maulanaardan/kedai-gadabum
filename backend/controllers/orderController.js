@@ -145,11 +145,24 @@ exports.updateStatus = async (req, res) => {
     const { id } = req.params;
     const { status } = req.body;
 
-    await Order.update({ status }, { where: { id } });
+    const updateData = { status };
 
-    res.json({ message: "Status updated" });
+    // 🔥 otomatis paid kalau processing
+    if (status === "processing") {
+      updateData.payment_status = "paid";
+    }
+
+    await Order.update(updateData, {
+      where: { id },
+    });
+
+    res.json({
+      message: "Status updated",
+    });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.status(500).json({
+      error: err.message,
+    });
   }
 };
 

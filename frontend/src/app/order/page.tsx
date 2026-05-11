@@ -122,7 +122,7 @@ export default function OrderPage() {
   }, []);
 
   const handleConfirmPayment = async () => {
-    const token = localStorage.getItem("token");
+    const token = sessionStorage.getItem("token");
     await fetch(`http://localhost:5000/orders/${currentOrder.id}/pay`, {
       method: "PUT",
       headers: {

@@ -19,9 +19,10 @@ router.get("/paid", authMiddleware, roleMiddleware(["kitchen"]), orderController
 // 🔒 KITCHEN (update status masak)
 router.put("/:id/status", authMiddleware, roleMiddleware(["kitchen","cashier"]), orderController.updateStatus);
 
-// 🔒 CASHIER / ADMIN (bayar)
-router.put("/:id/pay", authMiddleware, roleMiddleware(["cashier", "admin"]), orderController.updatePayment);
-
+// NOTE:
+// endpoint ini dibuat public untuk simulasi QRIS demo
+// production seharusnya menggunakan webhook payment gateway
+router.put("/:id/pay", orderController.updatePayment);
 // 🔒 KITCHEN (selesai masak)
 router.put("/:id/complete", authMiddleware, roleMiddleware(["kitchen"]), orderController.completeOrder);
 
