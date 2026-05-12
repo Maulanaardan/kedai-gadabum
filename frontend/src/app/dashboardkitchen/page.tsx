@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import LogoutButton from "../components/LogoutButton";
 
 export default function KitchenPage() {
   const [orders, setOrders] = useState<any[]>([]);
@@ -365,14 +366,16 @@ export default function KitchenPage() {
         ::-webkit-scrollbar-thumb { background: #2a2825; border-radius: 4px; }
       `}</style>
 
-      <div className="kp-root">
-        <header className="kp-header">
-          <div className="kp-brand">Kitchen Display</div>
+      <header className="kp-header">
+        <div className="kp-brand">Kitchen Display</div>
+        <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
           <div className="kp-live-pill">
             <div className="kp-live-dot" />
             Live
           </div>
-        </header>
+          <LogoutButton />
+        </div>
+      </header>
 
         <div className="kp-body">
           {/* PROCESSING */}
@@ -407,7 +410,6 @@ export default function KitchenPage() {
             )}
           </div>
         </div>
-      </div>
     </>
   );
 }

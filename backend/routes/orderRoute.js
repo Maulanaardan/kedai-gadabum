@@ -19,9 +19,16 @@ router.get("/paid", authMiddleware, roleMiddleware(["kitchen"]), orderController
 // 🔒 KITCHEN (update status masak)
 router.put("/:id/status", authMiddleware, roleMiddleware(["kitchen","cashier"]), orderController.updateStatus);
 
+// 🔥 Webhook Midtrans — TIDAK pakai auth middleware (Midtrans yang manggil)
+router.post("/payments/webhook", orderController.midtransWebhook);
+ 
+// 🔥 Cek status pembayaran (polling dari frontend)
+router.get("/:id/payment-status", orderController.checkPaymentStatus);
+
 // NOTE:
 // endpoint ini dibuat public untuk simulasi QRIS demo
 // production seharusnya menggunakan webhook payment gateway
+
 router.put("/:id/pay", orderController.updatePayment);
 // 🔒 KITCHEN (selesai masak)
 router.put("/:id/complete", authMiddleware, roleMiddleware(["kitchen"]), orderController.completeOrder);
