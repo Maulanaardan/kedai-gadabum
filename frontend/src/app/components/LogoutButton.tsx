@@ -2,7 +2,11 @@
 
 import { useRouter } from "next/navigation";
 
-export default function LogoutButton() {
+type Props = {
+  iconOnly?: boolean;
+};
+
+export default function LogoutButton({ iconOnly }: Props) {
   const router = useRouter();
 
   const handleLogout = () => {
@@ -36,18 +40,25 @@ export default function LogoutButton() {
           color: #f87171;
           background: #f8717108;
         }
-        .logout-btn:active {
-          opacity: 0.8;
-        }
-        .logout-icon {
-          font-size: 13px;
-          line-height: 1;
+        .logout-btn:active { opacity: 0.8; }
+        .logout-icon { font-size: 13px; line-height: 1; }
+
+        .logout-btn.icon-only {
+          padding: 10px;
+          border-radius: 10px;
+          width: 40px;
+          height: 40px;
+          justify-content: center;
         }
       `}</style>
 
-      <button className="logout-btn" onClick={handleLogout}>
+      <button
+        className={`logout-btn${iconOnly ? " icon-only" : ""}`}
+        onClick={handleLogout}
+        title="Keluar"
+      >
         <span className="logout-icon">⎋</span>
-        Keluar
+        {!iconOnly && "Keluar"}
       </button>
     </>
   );
