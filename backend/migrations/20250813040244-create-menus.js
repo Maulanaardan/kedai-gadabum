@@ -14,7 +14,7 @@ module.exports = {
         type: Sequelize.STRING,
       },
       category: {
-        type: Sequelize.ENUM("food", "drink"),
+        type: Sequelize.ENUM("food", "drink", "snack"),
       },
       description: {
         type: Sequelize.STRING,

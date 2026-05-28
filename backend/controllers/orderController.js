@@ -1,7 +1,5 @@
 const { Order, Table, OrderItem, Menu } = require("../models");
-const midtransClient = require("midtrans-client");
 const orderService = require("../services/orderService");
-const paymentService = require("../services/paymentService");
 
 // 🔥 CREATE ORDER
 exports.create = async (req, res) => {
