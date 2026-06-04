@@ -9,7 +9,7 @@ const roleMiddleware = require("../middlewares/roleMiddleware");
 router.post('/', orderController.create);
 
 // 🔒 ADMIN (lihat semua)
-router.get("/", authMiddleware, roleMiddleware(["admin"]), orderController.getAll);
+router.get("/", authMiddleware, roleMiddleware(["admin"]), orderController.getAllOrders);
 
 router.get("/cashier",authMiddleware,roleMiddleware(["cashier"]),orderController.getCashierOrders);
 

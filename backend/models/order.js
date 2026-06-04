@@ -40,9 +40,14 @@ module.exports = (sequelize, DataTypes) => {
       type: DataTypes.ENUM("unpaid", "paid"),
       defaultValue: "unpaid",
     },
-  }, {
-    sequelize,
-    modelName: 'Order',
-  });
-  return Order;
+    order_type: {
+      type: DataTypes.ENUM("dine_in", "take_away"),
+      allowNull: false,
+      defaultValue: "dine_in",
+    },
+      }, {
+      sequelize,
+      modelName: 'Order',
+    });
+    return Order;
 };

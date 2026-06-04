@@ -1,8 +1,9 @@
-const { Order, Table, OrderItem, Menu } = require("../models");
 const paymentService = require("../services/paymentService");
 //create data
+const { sequelize, Order, OrderItem, Menu } = require("../models"); // Pastikan import sequelize instance-nya
+
 exports.createOrder = async (data) => {
-  const { tableNumber, item, payment_method } = data;
+  const { tableNumber, item, payment_method, order_type } = data;
 
   if (!tableNumber || !item || !Array.isArray(item)) {
     throw new Error("Data tidak lengkap");
@@ -10,70 +11,93 @@ exports.createOrder = async (data) => {
 
   const orderCode = "ORD-" + Date.now();
 
-  const order = await Order.create({
-    table_id: tableNumber,
-    total_price: 0,
-    status: "pending",
-    payment_status: "unpaid",
-    order_code: orderCode,
-  });
+  // 🔥 1. MULAI TRANSAKSI DATABASE
+  const t = await sequelize.transaction();
 
-  let total = 0;
+  try {
+    // Buat order utama di dalam transaksi
+    const order = await Order.create({
+      table_id: tableNumber,
+      total_price: 0,
+      status: "pending",
+      payment_status: "unpaid",
+      order_code: orderCode,
+      order_type: order_type ?? "dine_in",
+    }, { transaction: t }); // 👈 ikutsertakan transaksi
 
-  for (const i of item) {
-    const menu = await Menu.findByPk(i.menu_id);
+    let total = 0;
 
-    if (!menu) continue;
+    for (const i of item) {
+      // 🔥 2. LOCK MENU BIAR TIDAK TERJADI RACE CONDITION
+      const menu = await Menu.findByPk(i.menu_id, {
+        transaction: t,
+        lock: t.LOCK.UPDATE // Pembeli lain harus antre nunggu baris ini selesai di-update
+      });
 
-    const sub_total = menu.price * i.quantity;
-    total += sub_total;
+      if (!menu) {
+        throw new Error(`Menu dengan ID ${i.menu_id} tidak ditemukan`);
+      }
 
-    await OrderItem.create({
-      order_id: order.id,
-      menu_item_id: i.menu_id,
-      quantity: i.quantity,
-      price: menu.price,
-      sub_total,
-    });
-  }
+      // Cek stok cukup
+      if (menu.stock < i.quantity) {
+        throw new Error(`Stock ${menu.name} habis (sisa: ${menu.stock})`);
+      }
 
-  await Order.update(
-    { total_price: total },
-    { where: { id: order.id } }
-  );
+      const sub_total = menu.price * i.quantity;
+      total += sub_total;
 
-  // kalau qris
-if (payment_method === "qris") {
-  const payment =
-    await paymentService.createQrisPayment({
-      orderCode,
-      total,
-    });
+      // Buat OrderItem
+      await OrderItem.create({
+        order_id: order.id,
+        menu_item_id: i.menu_id,
+        quantity: i.quantity,
+        price: menu.price,
+        sub_total,
+      }, { transaction: t });
 
-  await Order.update(
-    {
-      qr_url: payment.qr_url,
-      payment_token: payment.payment_token,
-    },
-    {
-      where: { id: order.id },
+      // Kurangi stock langsung lewat instance biar aman
+      menu.stock -= i.quantity;
+      await menu.save({ transaction: t });
     }
-  );
 
-  const updatedOrder =
-    await Order.findByPk(order.id);
+    // Update total harga orderan
+    await order.update({ total_price: total }, { transaction: t });
 
-  return {
-    message: "Order berhasil",
-    order: updatedOrder,
-    qr_url: payment.qr_url,
-  };
-}
+    // Kalau pembayarannya QRIS
+    if (payment_method === "qris") {
+      const payment = await paymentService.createQrisPayment({
+        orderCode,
+        total,
+      });
 
-  return {
-    message: "Order berhasil",
-    order,
-  };
+      await order.update({
+        qr_url: payment.qr_url,
+        payment_token: payment.payment_token,
+      }, { transaction: t });
+
+      // 🔥 3. COMMIT TRANSAKSI JIKA SEMUA SUKSES
+      await t.commit();
+
+      return {
+        message: "Order berhasil",
+        order: order, // Tidak perlu findByPk lagi karena objek 'order' sudah ter-update otomatis di memori
+        qr_url: payment.qr_url,
+      };
+    }
+
+    // 🔥 COMMIT UNTUK NON-QRIS (CASH/MANUAL)
+    await t.commit();
+
+    return {
+      message: "Order berhasil",
+      order,
+    };
+
+  } catch (error) {
+    // 🔥 4. JIKA ADA SATU SAJA YANG ERROR, BATALKAN SEMUA PROSES DI ATAS
+    await t.rollback();
+    throw error; // Lempar error ke controller agar ditangkap try-catch milik controller
+  }
 };
 
 //Webhook
@@ -156,6 +180,16 @@ exports.getAllOrders = async () => {
 // CASHIER
 exports.getCashierOrders = async () => {
   return await Order.findAll({
+    attributes: [
+      "id",
+      "order_code",
+      "table_id",
+      "status",
+      "total_price",
+      "order_type",      // ← tambah ini
+      "payment_status",
+      "createdAt",
+    ],
     include: [
       {
         model: OrderItem,
@@ -182,4 +216,69 @@ exports.getPaidOrders = async () => {
     ],
     order: [["createdAt", "DESC"]],
   });
+};
+
+  exports.markOrderPaid = async (id) => {
+  await Order.update(
+    {
+      payment_status: "paid",
+      status: "processing",
+    },
+    {
+      where: { id },
+    }
+  );
+
+  return {
+    message: "Payment success",
+  };
+};
+
+exports.completeOrder = async (id) => {
+  await Order.update(
+    {
+      status: "completed",
+    },
+    {
+      where: { id },
+    }
+  );
+
+  return {
+    message: "Order completed",
+  };
+};
+
+exports.getPaymentStatus = async (id) => {
+  const order = await Order.findByPk(id);
+
+  if (!order)
+    throw new Error("Order tidak ditemukan");
+
+  return {
+    payment_status: order.payment_status,
+    status: order.status,
+  };
+};
+
+exports.updateOrderStatus = async (
+  id,
+  status
+) => {
+  const updateData = { status };
+
+  if (status === "processing") {
+    updateData.payment_status = "paid";
+  }
+
+  await Order.update(
+    updateData,
+    {
+      where: { id },
+    }
+  );
+
+  return {
+    message: "Status updated",
+  };
 };
