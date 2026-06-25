@@ -11,28 +11,18 @@ exports.create = async (req, res) => {
   }
 };
 
-// GET ALL (ADMIN / GLOBAL)
-exports.getAllOrders = async (req, res) => {
-  try {
-    const result = await orderService.getAllOrders();
-    res.status(200).json(result);                
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
-};
-
-// 🔥 WEBHOOK dari Midtrans (otomatis dipanggil saat user sudah bayar)
+//  WEBHOOK dari Midtrans (otomatis dipanggil saat user sudah bayar)
 exports.midtransWebhook = async (req, res) => {
   try {
     const result = await orderService.midtransWebhook(req.body);
-    res.status(201).json(result);
+    res.status(200).json(result);
   } catch (err) {
     console.error("🔥 WEBHOOK ERROR:", err);
     res.status(500).json({ error: err.message });
   }
 };
 
-// 🔥 CEK STATUS PEMBAYARAN (polling dari frontend)
+//  CEK STATUS PEMBAYARAN (polling dari frontend)
 exports.checkPaymentStatus = async (req, res) => {
   try {
     const result =
@@ -45,37 +35,38 @@ exports.checkPaymentStatus = async (req, res) => {
     res.status(500).json({ error: err.message });
   }
 };
-// 🔥 GET ALL (ADMIN / GLOBAL)
+
+//  GET ALL (ADMIN / GLOBAL)
 exports.getAllOrders = async (req, res) => {
   try {
-    const result = await orderService.getAllOrders(); // ✅ ganti dari getAll
-    res.status(200).json(result);                     // ✅ ganti dari 201
+    const result = await orderService.getAllOrders(); 
+    res.status(200).json(result);                     
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
 };
 
-// 🔥 KHUSUS CASHIER
+// KHUSUS CASHIER
 exports.getCashierOrders = async (req, res) => {
   try {
-    const result = await orderService.getCashierOrders(); // ✅ ganti
+    const result = await orderService.getCashierOrders(); 
     res.status(200).json(result);
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
 };
 
-// 🔥 GET PAID (KITCHEN)
+//  GET PAID (KITCHEN)
 exports.getPaidOrders = async (req, res) => {
   try {
-    const result = await orderService.getPaidOrders(); // ✅ ganti
+    const result = await orderService.getPaidOrders(); 
     res.status(200).json(result);
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
 };
 
-// 🔥 COMPLETE ORDER (kitchen selesai)
+//  COMPLETE ORDER (kitchen selesai)
 exports.completeOrder = async (req, res) => {
   try {
     const result =

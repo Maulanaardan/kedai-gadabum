@@ -1,7 +1,6 @@
 const paymentService = require("../services/paymentService");
+const { sequelize, Order, OrderItem, Menu, Table } = require("../models"); // Pastikan import sequelize instance-nya
 //create data
-const { sequelize, Order, OrderItem, Menu } = require("../models"); // Pastikan import sequelize instance-nya
-
 exports.createOrder = async (data) => {
   const { tableNumber, item, payment_method, order_type } = data;
 
@@ -218,7 +217,8 @@ exports.getPaidOrders = async () => {
   });
 };
 
-  exports.markOrderPaid = async (id) => {
+// Order update payment
+exports.markOrderPaid = async (id) => {
   await Order.update(
     {
       payment_status: "paid",
@@ -234,6 +234,7 @@ exports.getPaidOrders = async () => {
   };
 };
 
+// Order complete update
 exports.completeOrder = async (id) => {
   await Order.update(
     {
@@ -249,6 +250,7 @@ exports.completeOrder = async (id) => {
   };
 };
 
+// Check status payment
 exports.getPaymentStatus = async (id) => {
   const order = await Order.findByPk(id);
 
@@ -261,6 +263,7 @@ exports.getPaymentStatus = async (id) => {
   };
 };
 
+//update status ordered
 exports.updateOrderStatus = async (
   id,
   status

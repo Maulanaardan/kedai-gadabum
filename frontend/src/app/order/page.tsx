@@ -3,19 +3,22 @@
 import { useEffect, useState, useRef } from "react";
 import { useSearchParams } from "next/navigation";
 import s from "./OrderPage.module.css";
+import OrderHead from "./components/orderHead";
+import OrderItems from "./components/orderItems";
+import OrderFooter from "./components/orderFooter";
+import QrModal from "./components/qrModal";
+import MobileCartSheet from "./components/modelCartSheet";
 
 type Menu = { id: number; name: string; price: number; category?: string; stock?: number };
 type CartItem = Menu & { qty: number };
 
 const CATEGORIES = ["Semua", "food", "drink", "snack"];
-
 const CAT_LABELS: Record<string, string> = {
   Semua: "Semua",
   food: "Makanan",
   drink: "Minuman",
   snack: "Snack",
 };
-
 const FOOD_EMOJIS: Record<string, string> = {
   default: "🍽️",
   food: "🍛",
@@ -27,6 +30,7 @@ export default function OrderPage() {
   const [menus, setMenus] = useState<Menu[]>([]);
   const [paymentMethod, setPaymentMethod] = useState("cash");
   const [showQR, setShowQR] = useState(false);
+  const [loading, setLoading] = useState(false);
   const [currentOrder, setCurrentOrder] = useState<any>(null);
   const [qrUrl, setQrUrl] = useState<string | null>(null);
   const [payStatus, setPayStatus] = useState<"waiting" | "paid" | "failed">("waiting");
@@ -38,7 +42,6 @@ export default function OrderPage() {
   const pollingRef = useRef<NodeJS.Timeout | null>(null);
   const searchParams = useSearchParams();
   const table = searchParams.get("table");
-
   const total = cart.reduce((sum, i) => sum + i.price * i.qty, 0);
   const cartCount = cart.reduce((sum, i) => sum + i.qty, 0);
   const tax = Math.round(total * 0.1);
@@ -103,6 +106,7 @@ export default function OrderPage() {
         order_type: dineIn ? "dine_in" : "take_away",
       }),
     });
+
     const data = await res.json();
     if (!res.ok) { alert(data.error); return; }
     if (paymentMethod === "qris") {
@@ -130,76 +134,6 @@ export default function OrderPage() {
   };
 
   useEffect(() => { fetchMenus(); return () => stopPolling(); }, []);
-
-  const OrderItems = () => (
-    <div className={s.orderItems}>
-      {cart.length === 0 ? (
-        <div className={s.orderEmpty}>
-          <div className={s.orderEmptyIcon}>🛒</div>
-          <span>Belum ada pesanan</span>
-        </div>
-      ) : (
-        cart.map((item) => (
-          <div key={item.id} className={s.orderRow}>
-            <div className={s.orderImg}>{FOOD_EMOJIS[item.category ?? "default"] ?? "🍽️"}</div>
-            <div className={s.orderInfo}>
-              <div className={s.orderItemName}>{item.name}</div>
-              <div className={s.orderItemPrice}>Rp {(item.price * item.qty).toLocaleString("id-ID")}</div>
-            </div>
-            <div className={s.qtyCtrl}>
-              <button className={s.qtyBtn} onClick={() => decreaseQty(item.id)}>−</button>
-              <span className={s.qtyNum}>{item.qty}</span>
-              <button className={s.qtyBtn} onClick={() => addToCart(item)}>+</button>
-            </div>
-          </div>
-        ))
-      )}
-    </div>
-  );
-
-  const OrderFooter = () => (
-    <div className={s.orderFooter}>
-      <div className={s.summaryRow}>
-        <span>Subtotal ({cartCount} item)</span>
-        <span>Rp {total.toLocaleString("id-ID")}</span>
-      </div>
-      <div className={s.summaryRow}>
-        <span>Pajak (10%)</span>
-        <span>Rp {tax.toLocaleString("id-ID")}</span>
-      </div>
-      <div className={s.summaryRowTotal}>
-        <span>Total</span>
-        <span className={s.summaryTotalAmount}>Rp {grandTotal.toLocaleString("id-ID")}</span>
-      </div>
-      <p className={s.paymentLabel}>Metode Pembayaran</p>
-      <select className={s.paymentSelect} value={paymentMethod} onChange={(e) => setPaymentMethod(e.target.value)}>
-        <option value="cash">Bayar di Kasir</option>
-        <option value="qris">QRIS</option>
-      </select>
-      <button className={s.checkoutBtn} onClick={handleCheckout} disabled={cart.length === 0}>
-        Checkout →
-      </button>
-    </div>
-  );
-
-  const OrderHead = () => (
-    <div className={s.orderHead}>
-      <div className={s.orderMeta}>
-        <div>
-          <div className={s.orderLabel}>Pesanan Saat Ini</div>
-          <div className={s.orderCode}>#907653</div>
-        </div>
-        <div>
-          <div className={s.orderLabel} style={{ textAlign: "center" }}>Meja</div>
-          <div className={s.orderTableNum}>T{table ?? "1"}</div>
-        </div>
-      </div>
-      <div className={s.dineTabs}>
-        <button className={`${s.dineTab} ${dineIn ? s.dineTabActive : ""}`} onClick={() => setDineIn(true)}>Makan di Sini</button>
-        <button className={`${s.dineTab} ${!dineIn ? s.dineTabActive : ""}`} onClick={() => setDineIn(false)}>Bawa Pulang</button>
-      </div>
-    </div>
-  );
 
   return (
     <div className={s.root}>
@@ -278,9 +212,26 @@ export default function OrderPage() {
         </main>
 
         <aside className={s.orderPanel}>
-          <OrderHead />
-          <OrderItems />
-          <OrderFooter />
+          <OrderHead
+            table={table}
+            dineIn={dineIn}
+            setDineIn={setDineIn}
+          />
+          <OrderItems
+            cart={cart}
+            decreaseQty={decreaseQty}
+            addToCart={addToCart}
+          />
+          <OrderFooter
+            cart={cart}
+            cartCount={cartCount}
+            total={total}
+            tax={tax}
+            grandTotal={grandTotal}
+            paymentMethod={paymentMethod}
+            setPaymentMethod={setPaymentMethod}
+            handleCheckout={handleCheckout}
+          />
         </aside>
       </div>
 
@@ -293,55 +244,32 @@ export default function OrderPage() {
       </button>
 
       {/* MOBILE BOTTOM SHEET */}
-      {showCart && (
-        <>
-          <div className={s.sheetOverlay} onClick={() => setShowCart(false)} />
-          <div className={s.sheet}>
-            <div className={s.sheetHandleRow}>
-              <span className={s.sheetTitle}>Pesanan</span>
-              <div className={s.sheetHandle} />
-              <button className={s.sheetClose} onClick={() => setShowCart(false)}>✕</button>
-            </div>
-            <OrderHead />
-            <OrderItems />
-            <OrderFooter />
-          </div>
-        </>
-      )}
+      <MobileCartSheet
+        showCart={showCart}
+        setShowCart={setShowCart}
+        table={table}
+        dineIn={dineIn}
+        setDineIn={setDineIn}
+        cart={cart}
+        decreaseQty={decreaseQty}
+        addToCart={addToCart}
+        cartCount={cartCount}
+        total={total}
+        tax={tax}
+        grandTotal={grandTotal}
+        paymentMethod={paymentMethod}
+        setPaymentMethod={setPaymentMethod}
+        handleCheckout={handleCheckout}
+      />
 
       {/* QR MODAL */}
-      {showQR && currentOrder && (
-        <div className={s.modalOverlay}>
-          <div className={s.modalBox}>
-            <h2 className={s.modalTitle}>Scan & Bayar</h2>
-            <p className={s.modalSub}>QRIS · {currentOrder.order_code}</p>
-            {qrUrl && payStatus === "waiting" && (
-              <div className={s.qrWrapper}>
-                <img src={qrUrl} alt="QRIS" width={200} height={200} />
-              </div>
-            )}
-            <div className={s.modalTotal}>
-              Total: <b>Rp {Number(currentOrder.total_price).toLocaleString("id-ID")}</b>
-            </div>
-            {payStatus === "waiting" && (
-              <div className={s.payWaiting}>
-                <div className={s.paySpinner} />
-                Menunggu pembayaran...
-              </div>
-            )}
-            {payStatus === "paid" && <div className={s.paySuccess}>✓ Pembayaran berhasil!</div>}
-            {payStatus === "failed" && <div className={s.payFailed}>✕ Pembayaran gagal / expired</div>}
-            {payStatus === "waiting" && (
-              <>
-                <div className={s.divider} />
-                <button className={s.confirmBtn} onClick={handleConfirmPayment}>
-                  Sudah Bayar (Manual)
-                </button>
-              </>
-            )}
-          </div>
-        </div>
-      )}
+      <QrModal
+        showQR={showQR}
+        currentOrder={currentOrder}
+        qrUrl={qrUrl}
+        payStatus={payStatus}
+        handleConfirmPayment={handleConfirmPayment}
+      />
     </div>
   );
 }

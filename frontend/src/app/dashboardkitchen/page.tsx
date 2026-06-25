@@ -3,29 +3,33 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import LogoutButton from "../components/LogoutButton";
+import {
+  getPaidOrders,
+  completeOrder
+} from "../../services/orderService";
+import {
+  getToken,
+  getRoles
+} from "../../services/authService";
 
 export default function KitchenPage() {
   const [orders, setOrders] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const router = useRouter();
 
-  const fetchOrders = async () => {
-    const token = sessionStorage.getItem("token");
-    console.log("TOKEN:", token);
+const fetchOrders = async () => {
+  const token = getToken();
 
-    const res = await fetch("http://localhost:5000/orders/paid", {
-      headers: {
-        Authorization: `Bearer ${token}`,
-      },
-    });
+  if (!token) return;
 
-    const data = await res.json();
-    setOrders(Array.isArray(data) ? data : []);
-  };
+  const data = await getPaidOrders(token);
+
+  setOrders(Array.isArray(data) ? data : []);
+};
 
   useEffect(() => {
-    const token = sessionStorage.getItem("token");
-    const roles = JSON.parse(sessionStorage.getItem("roles") || "[]");
+    const token = getToken();
+    const roles = getRoles();
 
     if (!token || !roles.includes("kitchen")) {
       router.push("/login");
@@ -39,20 +43,15 @@ export default function KitchenPage() {
     return () => clearInterval(interval);
   }, []);
 
-  const handleComplete = async (id: number) => {
-    const token = sessionStorage.getItem("token");
+const handleComplete = async (id:number) => {
+  const token = getToken();
 
-    await fetch(`http://localhost:5000/orders/${id}/status`, {
-      method: "PUT",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${token}`,
-      },
-      body: JSON.stringify({ status: "completed" }),
-    });
+  if (!token) return;
 
-    fetchOrders();
-  };
+  await completeOrder(id, token);
+
+  fetchOrders();
+};
 
   const getMinutes = (date: string) => {
     return Math.floor((Date.now() - new Date(date).getTime()) / 60000);

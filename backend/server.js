@@ -21,7 +21,7 @@ app.use("/auth", authRoutes);
 const PORT = process.env.PORT || 5000;
 
 // 🔥 UBAH JADI BEGINI
-sequelize.sync().then( async() => {
+sequelize.sync({ alter: true }).then( async() => {
   console.log("Database synced");
 
   app.listen(PORT, () => {
