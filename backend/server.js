@@ -10,7 +10,12 @@ const { sequelize } = require("./models");
 const app = express();
 const cors = require("cors");
 
-app.use(cors());
+app.use(cors({
+  origin: process.env.FRONTEND_URL,
+}));
+
+console.log("CORS origin diset ke:", process.env.FRONTEND_URL);
+
 app.use(express.json());
 
 app.use('/menus', menuRoutes); 
@@ -21,7 +26,7 @@ app.use("/auth", authRoutes);
 const PORT = process.env.PORT || 5000;
 
 // 🔥 UBAH JADI BEGINI
-sequelize.sync({ alter: true }).then( async() => {
+sequelize.sync().then( async() => {
   console.log("Database synced");
 
   app.listen(PORT, () => {
