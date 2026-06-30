@@ -37,10 +37,17 @@ interface OrderCardProps {
 }
 
 function OrderCard({ order, onComplete }: OrderCardProps) {
-  const minutes = getMinutes(order.createdAt);
+  const [minutes, setMinutes] = useState(() => getMinutes(order.createdAt));
   const isUrgent = minutes > 10;
   const isCompleted = order.status?.toLowerCase().trim() === "completed";
 
+  useEffect(() => {
+    const tick = setInterval(() => {
+      setMinutes(getMinutes(order.createdAt));
+    }, 60000); // update tiap 1 menit
+    return () => clearInterval(tick);
+  }, [order.createdAt]);
+ 
   const cardClass = [
     styles.card,
     isCompleted  ? styles.cardDone   : "",

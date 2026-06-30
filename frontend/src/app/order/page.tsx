@@ -8,6 +8,8 @@ import OrderItems from "./components/orderItems";
 import OrderFooter from "./components/orderFooter";
 import QrModal from "./components/qrModal";
 import MobileCartSheet from "./components/modelCartSheet";
+import { API_URL } from "@/utils/api";
+import { fetchWithAuth } from "@/utils/api";
 
 type Menu = { id: number; name: string; price: number; category?: string; stock?: number };
 type CartItem = Menu & { qty: number };
@@ -53,7 +55,7 @@ export default function OrderPage() {
 
   const fetchMenus = async () => {
     try {
-      const res = await fetch("http://localhost:5000/menus");
+      const res = await fetchWithAuth(`${API_URL}/menus`);
       const data = await res.json();
       setMenus(data);
     } catch {}
@@ -76,7 +78,7 @@ export default function OrderPage() {
   const startPolling = (orderId: number) => {
     pollingRef.current = setInterval(async () => {
       try {
-        const res = await fetch(`http://localhost:5000/orders/${orderId}/payment-status`);
+        const res = await fetchWithAuth(`${API_URL}/orders/${orderId}/payment-status`);
         const data = await res.json();
         if (data.payment_status === "paid") {
           clearInterval(pollingRef.current!);
@@ -95,7 +97,7 @@ export default function OrderPage() {
   const handleCheckout = async () => {
     if (!table) { alert("Table tidak ada!"); return; }
     if (cart.length === 0) { alert("Keranjang kosong!"); return; }
-    const res = await fetch("http://localhost:5000/orders", {
+    const res = await fetchWithAuth(`${API_URL}/orders`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
@@ -123,7 +125,7 @@ export default function OrderPage() {
 
   const handleConfirmPayment = async () => {
     const token = sessionStorage.getItem("token");
-    await fetch(`http://localhost:5000/orders/${currentOrder.id}/pay`, {
+    await fetchWithAuth(`${API_URL}/orders/${currentOrder.id}/pay`, {
       method: "PUT",
       headers: { Authorization: `Bearer ${token}` },
     });

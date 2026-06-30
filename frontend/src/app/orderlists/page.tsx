@@ -1,8 +1,8 @@
 "use client";
 import toast from "react-hot-toast";
-import { useRef, useState, useEffect } from "react";
-import { fetchWithAuth } from "@/utils/api";
-import { useRouter, usePathname } from "next/navigation";
+import { useRef, useState, useEffect, useCallback } from "react";
+import { fetchWithAuth, API_URL } from "@/utils/api";
+import { useRouter } from "next/navigation";
 import LogoutButton from "../components/LogoutButton";
 
 type OrderStatus = "pending" | "processing" | "completed" | "canceled";
@@ -31,7 +31,6 @@ export default function OrdersPage() {
   const [expandedId, setExpandedId]   = useState<number | null>(null);
   const prevCountRef                  = useRef(0);
   const router                        = useRouter();
-  const pathname                      = usePathname();
   const [filter, setFilter]           = useState("all");
   const [loading, setLoading]         = useState(true);
   const [search, setSearch]           = useState("");
@@ -39,18 +38,19 @@ export default function OrdersPage() {
   const [view, setView]               = useState<"today" | "history">("today");
   const [dateFilter, setDateFilter]   = useState("");
 
-  const fetchOrders = async () => {
-    try {
-      const res  = await fetchWithAuth("http://localhost:5000/orders/cashier");
-      const data = await res.json();
-      if (prevCountRef.current !== 0 && data.length > prevCountRef.current) {
-        toast.success("🚨 Order baru masuk!");
-      }
-      if (!res.ok) { console.error(data); setOrders([]); return; }
-      prevCountRef.current = data.length;
-      setOrders(data);
-    } catch (err) { console.error(err); }
-  };
+// ✅ wrap dengan useCallback
+const fetchOrders = useCallback(async () => {
+  try {
+    const res  = await fetchWithAuth(`${API_URL}/orders/cashier`);
+    const data = await res.json();
+    if (prevCountRef.current !== 0 && data.length > prevCountRef.current) {
+      toast.success("🚨 Order baru masuk!");
+    }
+    if (!res.ok) { console.error(data); setOrders([]); return; }
+    prevCountRef.current = data.length;
+    setOrders(data);
+  } catch (err) { console.error(err); }
+}, []); // kosong karena gak ada dependency external
 
   useEffect(() => {
     const token = sessionStorage.getItem("token");
@@ -60,17 +60,16 @@ export default function OrdersPage() {
     fetchOrders();
     const interval = setInterval(fetchOrders, 3000);
     return () => clearInterval(interval);
-  }, []);
+  }, [fetchOrders]);
 
-  const updateStatus = async (id: number, status: OrderStatus) => {
-    const token = sessionStorage.getItem("token");
-    await fetch(`http://localhost:5000/orders/${id}/status`, {
-      method: "PUT",
-      headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-      body: JSON.stringify({ status }),
-    });
-    setOrders((prev) => prev.map((o) => (o.id === id ? { ...o, status } : o)));
-  };
+ const updateStatus = async (id: number, status: OrderStatus) => {
+  await fetchWithAuth(`${API_URL}/orders/${id}/status`, {
+    method: "PUT",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ status }),
+  });
+  setOrders((prev) => prev.map((o) => (o.id === id ? { ...o, status } : o)));
+};
 
   const handlePrint = (order: Order) => {
     const itemsHtml = order.items.map((item) => `
