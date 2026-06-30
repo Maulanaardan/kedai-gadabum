@@ -6,7 +6,7 @@ exports.create = async (req, res) => {
     const result = await orderService.createOrder(req.body);
     res.status(201).json(result);
   } catch (err) {
-    console.error("🔥 ERROR CREATE ORDER:", err);
+    console.error("ERROR CREATE ORDER:", err);
     res.status(500).json({ error: err.message });
   }
 };
@@ -17,7 +17,7 @@ exports.midtransWebhook = async (req, res) => {
     const result = await orderService.midtransWebhook(req.body);
     res.status(200).json(result);
   } catch (err) {
-    console.error("🔥 WEBHOOK ERROR:", err);
+    console.error("WEBHOOK ERROR:", err);
     res.status(500).json({ error: err.message });
   }
 };

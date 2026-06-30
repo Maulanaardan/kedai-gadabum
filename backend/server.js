@@ -1,9 +1,9 @@
 require("dotenv").config();
 const express = require("express");
-const menuRoutes = require('./routes/menuRoute');
+const menuRoutes = require('./routes/menuRoutes');
 const tableRoutes = require('./routes/tableRoutes');
-const orderRoutes = require('./routes/orderRoute');
-const authRoutes = require("./routes/authRoute");
+const orderRoutes = require('./routes/orderRoutes');
+const authRoutes = require("./routes/authRoutes");
 
 const { sequelize } = require("./models");
 
@@ -13,8 +13,6 @@ const cors = require("cors");
 app.use(cors({
   origin: process.env.FRONTEND_URL,
 }));
-
-console.log("CORS origin diset ke:", process.env.FRONTEND_URL);
 
 app.use(express.json());
 

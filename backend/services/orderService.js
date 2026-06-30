@@ -219,19 +219,7 @@ exports.getPaidOrders = async () => {
 
 // Order update payment
 exports.markOrderPaid = async (id) => {
-  await Order.update(
-    {
-      payment_status: "paid",
-      status: "processing",
-    },
-    {
-      where: { id },
-    }
-  );
-
-  return {
-    message: "Payment success",
-  };
+  return await exports.updateOrderStatus(id, "processing");
 };
 
 // Order complete update
