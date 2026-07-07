@@ -24,13 +24,13 @@ app.use("/auth", authRoutes);
 const PORT = process.env.PORT || 5000;
 
 // 🔥 UBAH JADI BEGINI
-sequelize.sync().then( async() => {
+sequelize.sync().then(async () => {
   console.log("Database synced");
-
-  app.listen(PORT, () => {
-    console.log(`server jalan di port ${PORT}`);
-  });
-  await createUsers(); // 👈 ini bikin user otomatis
+  app.listen(PORT, () => console.log(`server jalan di port ${PORT}`));
+  
+  if (process.env.NODE_ENV === "development") {
+    await createUsers();
+  }
 });
 
 const bcrypt = require("bcrypt");
