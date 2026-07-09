@@ -78,13 +78,15 @@
 .body {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  min-height: calc(100vh - 65px);
+  height: calc(100vh - 65px);
 }
 
 /* COLUMN */
 .col {
   padding: 32px 36px;
   border-right: 1px solid #1e1c19;
+  overflow-y: auto;            
+  height: 100%;  
 }
 
 .col:last-child {
