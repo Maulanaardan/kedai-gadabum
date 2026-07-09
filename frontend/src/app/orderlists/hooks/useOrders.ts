@@ -1,4 +1,3 @@
-import { useRouter } from "next/navigation";
 import { useState, useEffect, useCallback, useRef } from "react";
 import toast from "react-hot-toast";
 import { fetchWithAuth, API_URL } from "@/utils/api";
@@ -29,11 +28,9 @@ export type Order = {
 };
 
 export function useOrders() {
-  const router = useRouter();
   const [orders, setOrders] = useState<Order[]>([]);
   const prevCountRef = useRef(0);
   const [loading, setLoading] = useState(true);
-  const [authorized, setAuthorized] = useState(false);
 
   const fetchOrders = useCallback(async () => {
     try {
@@ -78,18 +75,11 @@ export function useOrders() {
   }, []);
 
  useEffect(() => {
-  const token = sessionStorage.getItem("token");
-  const roles = JSON.parse(sessionStorage.getItem("roles") || "[]");
-  if (!token || !roles.includes("cashier")) {
-    router.push("/login");
-    return; // authorized tetap false, loading tetap true → blank screen
-  }
-  setAuthorized(true);
   setLoading(false);
   fetchOrders();
   const interval = setInterval(fetchOrders, 3000);
   return () => clearInterval(interval);
 }, [fetchOrders]);
 
-  return { orders, loading, authorized, updateStatus };
+  return { orders, loading, updateStatus };
 }

@@ -1,5 +1,5 @@
 "use client";
-
+import { useAuthGuard } from "@/hooks/useAuthGuard";
 import { useEffect, useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import LogoutButton from "../components/LogoutButton";
@@ -120,6 +120,7 @@ function EmptyState({ icon, text }: { icon: string; text: string }) {
 // ─── KitchenPage ─────────────────────────────────────────────────────────────
 
 export default function KitchenPage() {
+  const { authorized, loading: authLoading } = useAuthGuard("kitchen");
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
   const router = useRouter();
@@ -138,15 +139,6 @@ export default function KitchenPage() {
   }, []);
 
   useEffect(() => {
-    const token = getToken();
-    const roles = getRoles();
-
-    if (!token || !roles.includes("kitchen")) {
-      router.push("/login");
-      return;
-    }
-
-    setLoading(false);
     fetchOrders();
 
     const interval = setInterval(fetchOrders, 3000);
@@ -160,7 +152,7 @@ export default function KitchenPage() {
     fetchOrders();
   }, [fetchOrders]);
 
-  if (loading) {
+  if (authLoading || !authorized) {
     return <div className={styles.loading}>Loading dashboard...</div>;
   }
 

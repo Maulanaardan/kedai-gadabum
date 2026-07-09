@@ -1,4 +1,5 @@
 "use client";
+import { useAuthGuard } from "@/hooks/useAuthGuard";
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import LogoutButton from "../components/LogoutButton";
@@ -10,12 +11,21 @@ import styles from "./components/orderlists.module.css";
 
 
 const NAV_ITEMS = [
-  { icon: "🧾", label: "Order",   view: "today"   as const },
-  { icon: "🕐", label: "Histori", view: "history" as const },
-];
+    { icon: "🧾", label: "Order",   view: "today"   as const },
+    { icon: "🕐", label: "Histori", view: "history" as const },
+  ];
+
+ const STATUS_FILTERS = [
+    { key: "all",        label: "Semua"    },
+    { key: "pending",    label: "Pending"  },
+    { key: "processing", label: "Diproses" },
+    { key: "completed",  label: "Selesai"  },
+    { key: "canceled",   label: "Dibatal"  },
+  ];
 
 export default function OrdersPage() {
-  const { orders, loading, authorized, updateStatus } = useOrders();
+  const { authorized, loading: authLoading } = useAuthGuard("cashier");
+  const { orders, loading, updateStatus } = useOrders();
   const [expandedId, setExpandedId]   = useState<number | null>(null);
   const router                        = useRouter();
   const [filter, setFilter]           = useState("all");
@@ -34,7 +44,7 @@ export default function OrdersPage() {
 
   const toggleExpand = (id: number) => setExpandedId((prev) => (prev === id ? null : id));
 
-  if (loading || !authorized) {
+  if (authLoading || !authorized) {
     return <div className={styles.loading} />;
   }
 
@@ -63,25 +73,20 @@ export default function OrdersPage() {
     return matchStatus && matchSearch && matchTable;
   });
 
-  const pendingCount    = displayOrders.filter((o) => o.status === "pending").length;
-  const processingCount = displayOrders.filter((o) => o.status === "processing").length;
-  const completedCount  = displayOrders.filter((o) => o.status === "completed").length;
-  const canceledCount   = displayOrders.filter((o) => o.status === "canceled").length;
-
-  const STATUS_FILTERS = [
-    { key: "all",        label: "Semua"    },
-    { key: "pending",    label: "Pending"  },
-    { key: "processing", label: "Diproses" },
-    { key: "completed",  label: "Selesai"  },
-    { key: "canceled",   label: "Dibatal"  },
-  ];
+  const counts = {
+    pending:    displayOrders.filter((o) => o.status === "pending").length,
+    processing: displayOrders.filter((o) => o.status === "processing").length,
+    completed:  displayOrders.filter((o) => o.status === "completed").length,
+    canceled:   displayOrders.filter((o) => o.status === "canceled").length,
+  };
 
   const STAT_CARDS = [
-    { label: "Pending",  count: pendingCount,    icon: "⏳", iconBg: "#FEF9C3", subLabel: "Menunggu diproses" },
-    { label: "Diproses", count: processingCount, icon: "🔥", iconBg: "#DBEAFE", subLabel: "Sedang disiapkan"  },
-    { label: "Selesai",  count: completedCount,  icon: "✅", iconBg: "#DCFCE7", subLabel: view === "today" ? "Order hari ini" : "Total selesai" },
-    { label: "Dibatal",  count: canceledCount,   icon: "❌", iconBg: "#FEE2E2", subLabel: "Order dibatalkan"  },
+    { label: "Pending",  count: counts.pending,    icon: "⏳", iconBg: "#FEF9C3", subLabel: "Menunggu diproses" },
+    { label: "Diproses", count: counts.processing, icon: "🔥", iconBg: "#DBEAFE", subLabel: "Sedang disiapkan"  },
+    { label: "Selesai",  count: counts.completed,  icon: "✅", iconBg: "#DCFCE7", subLabel: view === "today" ? "Order hari ini" : "Total selesai" },
+    { label: "Dibatal",  count: counts.canceled,   icon: "❌", iconBg: "#FEE2E2", subLabel: "Order dibatalkan"  },
   ];
+
   const hasDateFilter = !!dateFilter;
 
   return (

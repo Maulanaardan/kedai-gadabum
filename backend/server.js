@@ -16,6 +16,11 @@ app.use(cors({
 
 app.use(express.json());
 
+app.use((err, req, res, next) => {
+  console.error("UNHANDLED ERROR:", err);
+  res.status(500).json({ error: "Internal server error" });
+});
+
 app.use('/menus', menuRoutes); 
 app.use('/tables', tableRoutes);
 app.use('/orders', orderRoutes); 
