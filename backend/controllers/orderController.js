@@ -7,7 +7,7 @@ exports.create = async (req, res) => {
     res.status(201).json(result);
   } catch (err) {
     console.error("ERROR CREATE ORDER:", err);
-    res.status(500).json({ error: err.message });
+   res.status(err.status || 500).json({ error: err.message });
   }
 };
 

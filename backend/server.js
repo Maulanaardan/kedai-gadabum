@@ -16,15 +16,24 @@ app.use(cors({
 
 app.use(express.json());
 
-app.use((err, req, res, next) => {
-  console.error("UNHANDLED ERROR:", err);
-  res.status(500).json({ error: "Internal server error" });
-});
+app.use('/menus', menuRoutes); 
+app.use('/tables', tableRoutes);
+app.use('/orders', orderRoutes); 
+app.use("/auth", authRoutes);
 
 app.use('/menus', menuRoutes); 
 app.use('/tables', tableRoutes);
 app.use('/orders', orderRoutes); 
 app.use("/auth", authRoutes);
+
+// Error handler harus paling bawah, setelah semua routes
+app.use((err, req, res, next) => {
+  const status = err.status || 500;
+  if (status >= 500) console.error("UNHANDLED ERROR:", err);
+  res.status(status).json({
+    error: status >= 500 ? "Internal server error" : err.message,
+  });
+});
 
 const PORT = process.env.PORT || 5000;
 

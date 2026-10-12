@@ -29,7 +29,9 @@ router.get("/:id/payment-status", orderController.checkPaymentStatus);
 // endpoint ini dibuat public untuk simulasi QRIS demo
 // production seharusnya menggunakan webhook payment gateway
 
-router.put("/:id/pay", orderController.updatePayment);
+if (process.env.ENABLE_PAY_SIMULATION === "true") {
+  router.put("/:id/pay", orderController.updatePayment);
+}
 // 🔒 KITCHEN (selesai masak)
 router.put("/:id/complete", authMiddleware, roleMiddleware(["kitchen"]), orderController.completeOrder);
 
