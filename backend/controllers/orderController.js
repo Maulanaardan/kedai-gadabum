@@ -18,7 +18,7 @@ exports.midtransWebhook = async (req, res) => {
     res.status(200).json(result);
   } catch (err) {
     console.error("WEBHOOK ERROR:", err);
-    res.status(500).json({ error: err.message });
+    res.status(err.status || 500).json({ error: err.message });
   }
 };
 
@@ -69,33 +69,24 @@ exports.getPaidOrders = async (req, res) => {
 //  COMPLETE ORDER (kitchen selesai)
 exports.completeOrder = async (req, res) => {
   try {
-    const result =
-      await orderService.completeOrder(
-        req.params.id
-      );
-
+    const result = await orderService.completeOrder(req.params.id);
     res.json(result);
   } catch (err) {
-    res.status(500).json({
-      error: err.message,
-    });
+    res.status(err.status || 500).json({ error: err.message });
   }
 };
 
-
 exports.updateStatus = async (req, res) => {
   try {
-    const result =
-      await orderService.updateOrderStatus(
-        req.params.id,
-        req.body.status
-      );
-
+    const roles = [].concat(req.user.roles);
+    const result = await orderService.updateOrderStatus(
+      req.params.id,
+      req.body.status,
+      roles
+    );
     res.status(200).json(result);
   } catch (err) {
-    res.status(500).json({
-      error: err.message,
-    });
+    res.status(err.status || 500).json({ error: err.message });
   }
 };
 

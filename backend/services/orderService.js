@@ -1,9 +1,14 @@
 const paymentService = require("../services/paymentService");
 const { sequelize, Order, OrderItem, Menu, Table } = require("../models"); // Pastikan import sequelize instance-nya
+const badRequest = (message) => {
+  const err = new Error(message);
+  err.status = 400;
+  return err;
+};
 //create data
 // Batalkan order dan kembalikan stok. Aman dipanggil berulang
 // (kalau sudah canceled, tidak melakukan apa-apa).
-const cancelOrderAndRestoreStock = async (orderId) => {
+const cancelOrderAndRestoreStock = async (orderId, paymentStatus) => {
   const t = await sequelize.transaction();
   try {
     const order = await Order.findByPk(orderId, {
@@ -30,7 +35,9 @@ const cancelOrderAndRestoreStock = async (orderId) => {
       });
     }
 
-    await order.update({ status: "canceled" }, { transaction: t });
+    const changes = { status: "canceled" };
+    if (paymentStatus) changes.payment_status = paymentStatus;
+    await order.update(changes, { transaction: t });
     await t.commit();
   } catch (err) {
     await t.rollback();
@@ -140,61 +147,41 @@ exports.createOrder = async (data) => {
 
 //Webhook
 exports.midtransWebhook = async (notification) => {
+  // Status diambil dari API Midtrans (terverifikasi), bukan dipercaya dari body request
   const statusResponse =
     await paymentService.handleMidtransWebhook(notification);
 
-  const {
-    order_id,
-    transaction_status,
-    fraud_status,
-  } = statusResponse;
+  const { order_id, transaction_status, fraud_status } = statusResponse;
 
-  console.log(
-    `Webhook: order_id=${order_id} status=${transaction_status}`
-  );
+  console.log(`Webhook: order_id=${order_id} status=${transaction_status}`);
 
-  const order = await Order.findOne({
-    where: { order_code: order_id },
-  });
+  const order = await Order.findOne({ where: { order_code: order_id } });
 
   if (!order) {
-    throw new Error("Order tidak ditemukan");
+    const err = new Error("Order tidak ditemukan");
+    err.status = 404;
+    throw err;
   }
 
-  if (
-    transaction_status === "settlement" ||
-    transaction_status === "capture"
-  ) {
-    if (fraud_status === "accept" || !fraud_status) {
-      await Order.update(
-        {
-          payment_status: "paid",
-          status: "processing",
-        },
-        {
-          where: { order_code: order_id },
-        }
-      );
+  const isSuccess =
+    (transaction_status === "settlement" || transaction_status === "capture") &&
+    (fraud_status === "accept" || !fraud_status);
+
+  const isFailed = ["cancel", "deny", "expire"].includes(transaction_status);
+
+  if (isSuccess) {
+    // Idempotent: abaikan notifikasi duplikat, dan jangan menghidupkan order yang sudah dibatalkan
+    if (order.payment_status !== "paid" && order.status !== "canceled") {
+      await order.update({ payment_status: "paid", status: "processing" });
     }
-  } else if (
-    transaction_status === "cancel" ||
-    transaction_status === "deny" ||
-    transaction_status === "expire"
-  ) {
-    await Order.update(
-      {
-        payment_status: "failed",
-        status: "canceled",
-      },
-      {
-        where: { order_code: order_id },
-      }
-    );
+  } else if (isFailed) {
+    // Jangan batalkan order yang sudah dibayar; helper sudah aman dipanggil berulang
+    if (order.payment_status !== "paid") {
+      await cancelOrderAndRestoreStock(order.id, "failed");
+    }
   }
 
-  return {
-    message: "Webhook processed",
-  };
+  return { message: "Webhook processed" };
 };
 
 //get all
@@ -261,22 +248,6 @@ exports.markOrderPaid = async (id) => {
   return await exports.updateOrderStatus(id, "processing");
 };
 
-// Order complete update
-exports.completeOrder = async (id) => {
-  await Order.update(
-    {
-      status: "completed",
-    },
-    {
-      where: { id },
-    }
-  );
-
-  return {
-    message: "Order completed",
-  };
-};
-
 // Check status payment
 exports.getPaymentStatus = async (id) => {
   const order = await Order.findByPk(id);
@@ -290,25 +261,64 @@ exports.getPaymentStatus = async (id) => {
   };
 };
 
-//update status ordered
-exports.updateOrderStatus = async (
-  id,
-  status
-) => {
-  const updateData = { status };
+// Order complete update
+exports.completeOrder = async (id) => {
+  return exports.updateOrderStatus(id, "completed");
+};
 
-  if (status === "processing") {
-    updateData.payment_status = "paid";
+const ALLOWED_TRANSITIONS = {
+  pending: ["processing", "canceled"],
+  processing: ["completed", "canceled"],
+  completed: [],
+  canceled: [],
+};
+
+const httpError = (status, message) => {
+  const err = new Error(message);
+  err.status = status;
+  return err;
+};
+
+//update status ordered
+// roles: peran pemanggil. Kosong (undefined) = pemanggilan internal.
+exports.updateOrderStatus = async (id, status, roles) => {
+  if (!Object.keys(ALLOWED_TRANSITIONS).includes(status)) {
+    throw badRequest("Status tidak valid");
   }
 
-  await Order.update(
-    updateData,
-    {
-      where: { id },
-    }
-  );
+  // Dapur hanya boleh menandai order selesai
+  if (roles && !roles.includes("cashier") && status !== "completed") {
+    throw httpError(403, "Tidak diizinkan mengubah ke status ini");
+  }
 
-  return {
-    message: "Status updated",
-  };
+  const order = await Order.findByPk(id);
+  if (!order) {
+    throw httpError(404, "Order tidak ditemukan");
+  }
+
+  if (!ALLOWED_TRANSITIONS[order.status].includes(status)) {
+    throw httpError(
+      409,
+      `Tidak bisa mengubah status dari ${order.status} ke ${status}`
+    );
+  }
+
+  // Batal: kembalikan stok sekalian
+  if (status === "canceled") {
+    await cancelOrderAndRestoreStock(order.id);
+    return { message: "Status updated" };
+  }
+
+  const changes = { status };
+  if (status === "processing") changes.payment_status = "paid";
+
+  // Hanya berhasil kalau status belum berubah sejak dibaca (mencegah balapan)
+  const [affected] = await Order.update(changes, {
+    where: { id: order.id, status: order.status },
+  });
+  if (affected === 0) {
+    throw httpError(409, "Status order sudah berubah, muat ulang");
+  }
+
+  return { message: "Status updated" };
 };
