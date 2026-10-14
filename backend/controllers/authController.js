@@ -2,26 +2,31 @@ const { User } = require("../models");
 const bcrypt = require("bcrypt");
 const jwt = require("jsonwebtoken");
 
+// Hash bohongan, dipakai agar waktu respons sama baik user ada maupun tidak
+const DUMMY_HASH = bcrypt.hashSync("dummy-password", 10);
+
 exports.login = async (req, res) => {
-  const { username, password } = req.body;
+  const { username, password } = req.body ?? {};
+
+  if (
+    typeof username !== "string" ||
+    typeof password !== "string" ||
+    !username ||
+    !password
+  ) {
+    return res.status(400).json({ error: "Username dan password wajib diisi" });
+  }
 
   const user = await User.findOne({ where: { username } });
 
-  if (!user) {
-    return res.status(404).json({
-      error: "User tidak ditemukan",
-    });
-  }
-
+  // Selalu jalankan compare, supaya waktu respons tidak membocorkan apakah user ada
   const match = await bcrypt.compare(
     password,
-    user.password
+    user ? user.password : DUMMY_HASH
   );
 
-  if (!match) {
-    return res.status(400).json({
-      error: "Password salah",
-    });
+  if (!user || !match) {
+    return res.status(401).json({ error: "Username atau password salah" });
   }
 
   const roles = user.roles;

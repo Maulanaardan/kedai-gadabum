@@ -4,11 +4,17 @@ const menuRoutes = require('./routes/menuRoutes');
 const tableRoutes = require('./routes/tableRoutes');
 const orderRoutes = require('./routes/orderRoutes');
 const authRoutes = require("./routes/authRoutes");
+const helmet = require("helmet");
 
 const { sequelize } = require("./models");
 
 const app = express();
 const cors = require("cors");
+
+// Di belakang proxy Railway (1 lapis): perlu agar IP asli terbaca oleh rate limiter
+app.set("trust proxy", 1);
+
+app.use(helmet({ crossOriginResourcePolicy: { policy: "cross-origin" } }));
 
 app.use(cors({
   origin: process.env.FRONTEND_URL,
